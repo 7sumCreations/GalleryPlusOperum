@@ -16,6 +16,8 @@
 
 package com.android.gallery3d.provider;
 
+import com.android.gallery3d.BuildConfig;
+
 import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.content.Context;
@@ -44,7 +46,7 @@ import java.io.IOException;
 public class GalleryProvider extends ContentProvider {
     private static final String TAG = "GalleryProvider";
 
-    public static final String AUTHORITY = "com.android.gallery3d.provider";
+    public static final String AUTHORITY = BuildConfig.APPLICATION_ID + ".provider";
     public static final Uri BASE_URI = Uri.parse("content://" + AUTHORITY);
 
     public static interface PicasaColumns {

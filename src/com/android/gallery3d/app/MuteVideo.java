@@ -88,7 +88,7 @@ public class MuteVideo {
                             Uri videoUri = FileProvider.getUriForFile(
                                     mActivity,
                                     mActivity.getApplicationContext().getPackageName()
-                                            + ".provider", mDstFileInfo.mFile);
+                                            + ".fileprovider", mDstFileInfo.mFile);
                             intent.setDataAndType(videoUri, "video/*");
                             intent.putExtra(MediaStore.EXTRA_FINISH_ON_COMPLETION, false);
                             mActivity.startActivity(intent);

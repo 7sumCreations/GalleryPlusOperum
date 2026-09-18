@@ -16,6 +16,8 @@
 
 package com.android.gallery3d.filtershow.provider;
 
+import com.android.gallery3d.BuildConfig;
+
 import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.database.Cursor;
@@ -37,7 +39,7 @@ public class SharedImageProvider extends ContentProvider {
 
     public static final String MIME_TYPE = "image/jpeg";
     public static final String AUTHORITY =
-            "com.android.gallery3d.filtershow.provider.SharedImageProvider";
+            BuildConfig.APPLICATION_ID + ".filtershow.provider.SharedImageProvider";
     public static final Uri CONTENT_URI = Uri.parse("content://" + AUTHORITY + "/image");
     public static final String PREPARE = "prepare";
 

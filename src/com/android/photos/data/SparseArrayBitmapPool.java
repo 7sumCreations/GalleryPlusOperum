@@ -19,8 +19,8 @@ package com.android.photos.data;
 import android.graphics.Bitmap;
 import android.util.SparseArray;
 
-import android.util.Pools.Pool;
-import android.util.Pools.SimplePool;
+import com.android.photos.util.Pools.Pool;
+import com.android.photos.util.Pools.SimplePool;
 
 /**
  * Bitmap pool backed by a sparse array indexing linked lists of bitmaps

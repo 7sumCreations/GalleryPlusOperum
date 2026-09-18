@@ -266,7 +266,7 @@ public class TrimVideo extends Activity implements
                             Uri videoUri = FileProvider.getUriForFile(
                                     TrimVideo.this,
                                     getApplicationContext().getPackageName()
-                                            + ".provider", mDstFileInfo.mFile);
+                                            + ".fileprovider", mDstFileInfo.mFile);
                             intent.setDataAndType(videoUri, "video/*");
                             intent.putExtra(MediaStore.EXTRA_FINISH_ON_COMPLETION, false);
                             startActivity(intent);

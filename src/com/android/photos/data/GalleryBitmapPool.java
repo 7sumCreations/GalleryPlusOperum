@@ -18,8 +18,8 @@ package com.android.photos.data;
 
 import android.graphics.Bitmap;
 import android.graphics.Point;
-import android.util.Pools.Pool;
-import android.util.Pools.SynchronizedPool;
+import com.android.photos.util.Pools.Pool;
+import com.android.photos.util.Pools.SynchronizedPool;
 
 import com.android.photos.data.SparseArrayBitmapPool.Node;
 

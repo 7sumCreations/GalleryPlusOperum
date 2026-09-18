@@ -23,8 +23,8 @@ import android.graphics.RectF;
 import androidx.collection.LongSparseArray;
 import android.util.DisplayMetrics;
 import android.util.Log;
-import android.util.Pools.Pool;
-import android.util.Pools.SynchronizedPool;
+import com.android.photos.util.Pools.Pool;
+import com.android.photos.util.Pools.SynchronizedPool;
 import android.view.View;
 import android.view.WindowManager;
 

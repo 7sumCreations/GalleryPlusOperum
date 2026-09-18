@@ -16,6 +16,8 @@
 
 package com.android.photos.data;
 
+import com.android.gallery3d.BuildConfig;
+
 interface PhotoProviderAuthority {
-    public static final String AUTHORITY = "com.android.gallery3d.photoprovider";
+    public static final String AUTHORITY = BuildConfig.APPLICATION_ID + ".photoprovider";
 }
