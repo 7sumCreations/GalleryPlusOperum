@@ -300,14 +300,22 @@ public class LocalAlbum extends MediaSet {
 
     @Override
     public int getSupportedOperations() {
-        return SUPPORT_SHARE | SUPPORT_INFO | SUPPORT_RENAME_FOLDER | SUPPORT_MOVE_FOLDER;
+        return SUPPORT_SHARE | SUPPORT_INFO | SUPPORT_RENAME_FOLDER | SUPPORT_MOVE_FOLDER
+                | SUPPORT_DELETE;
     }
 
     @Override
     public void delete() {
-        GalleryUtils.assertNotInRenderThread();
-        mResolver.delete(mBaseUri, getWhereClause(),
-                getWhereArgs());
+        // F-024: deleting a folder sends its contents to Trash. The files stay
+        // on disk until the trash is emptied or the 30-day purge runs.
+        com.android.gallery3d.fileops.FolderOpResult result =
+                new com.android.gallery3d.fileops.FileOpEngine(
+                        new com.android.gallery3d.fileops.ContentResolverGateway(
+                                mApplication.getAndroidContext()))
+                        .trashFolder(getRelativePath());
+        if (!result.ok) {
+            throw new UnsupportedOperationException(result.failureReason);
+        }
     }
 
     @Override

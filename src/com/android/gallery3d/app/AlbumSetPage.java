@@ -590,6 +590,51 @@ public class AlbumSetPage extends ActivityState implements
                             });
                     return true;
                 }
+                if (item.getItemId() == R.id.action_delete) {
+                    java.util.ArrayList<Path> selected = mSelectionManager.getSelected(false);
+                    if (selected.size() != 1) return false;
+                    com.android.gallery3d.data.MediaObject object =
+                            mActivity.getDataManager().getMediaObject(selected.get(0));
+                    if (!(object instanceof com.android.gallery3d.data.LocalAlbum)) return false;
+                    final String folder =
+                            ((com.android.gallery3d.data.LocalAlbum) object).getRelativePath();
+                    final com.android.gallery3d.fileops.ContentResolverGateway gateway =
+                            new com.android.gallery3d.fileops.ContentResolverGateway(
+                                    mActivity.getAndroidContext());
+                    if (folder.equalsIgnoreCase(
+                            com.android.gallery3d.fileops.FileOpEngine.CAMERA_PATH)) {
+                        android.widget.Toast.makeText((android.app.Activity) mActivity,
+                                R.string.cannot_delete_camera_folder,
+                                android.widget.Toast.LENGTH_LONG).show();
+                        return true;
+                    }
+                    new android.app.AlertDialog.Builder((android.app.Activity) mActivity)
+                            .setMessage(mActivity.getString(R.string.delete_folder_confirm,
+                                    com.android.gallery3d.fileops.RelativePaths
+                                            .lastSegment(folder)))
+                            .setPositiveButton(android.R.string.ok,
+                                    new android.content.DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(
+                                                android.content.DialogInterface d, int w) {
+                                            com.android.gallery3d.fileops.FolderOpResult result =
+                                                    new com.android.gallery3d.fileops.FileOpEngine(
+                                                            gateway).trashFolder(folder);
+                                            android.widget.Toast.makeText(
+                                                    (android.app.Activity) mActivity,
+                                                    result.ok
+                                                            ? mActivity.getString(
+                                                                    R.string.deleted_folder,
+                                                                    result.itemsChanged)
+                                                            : result.failureReason,
+                                                    android.widget.Toast.LENGTH_LONG).show();
+                                            mSelectionManager.leaveSelectionMode();
+                                        }
+                                    })
+                            .setNegativeButton(android.R.string.cancel, null)
+                            .show();
+                    return true;
+                }
                 return onItemSelected(item);
             }
         });

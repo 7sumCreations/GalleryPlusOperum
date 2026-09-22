@@ -130,6 +130,12 @@
     <string name="choose_parent_folder">Move into which folder?</string>
     <!-- Confirmation after a folder move; %1$d is how many photos moved. -->
     <string name="moved_folder">Moved. %1$d photos moved.</string>
+    <!-- Confirmation before deleting a folder; %1$s is the folder name. -->
+    <string name="delete_folder_confirm">Move everything in %1$s to Trash?</string>
+    <!-- Result of deleting a folder; %1$d is how many photos went to Trash. -->
+    <string name="deleted_folder">Moved %1$d photos to Trash</string>
+    <!-- Shown when the user tries to delete DCIM/Camera. -->
+    <string name="cannot_delete_camera_folder">The camera folder cannot be deleted</string>
     <!-- String Delete the selected media item(s) [CHAR LIMIT=50] -->
     <plurals name="delete_selection">
         <item quantity="one">Delete selected item?</item>
