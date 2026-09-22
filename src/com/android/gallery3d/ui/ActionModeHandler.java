@@ -216,6 +216,12 @@ public class ActionModeHandler implements Callback, PopupList.OnPopupItemClickLi
                         });
                 return true;
             }
+            if (action == R.id.action_favourite) {
+                mMenuExecutor.startFileOpBatch(
+                        com.android.gallery3d.fileops.FileOpBatch.Kind.FAVOURITE, null);
+                mSelectionManager.leaveSelectionMode();
+                return true;
+            }
             mMenuExecutor.onMenuClicked(item, confirmMsg, listener);
         } finally {
             root.unlockRenderThread();

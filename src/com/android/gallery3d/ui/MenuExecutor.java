@@ -182,6 +182,7 @@ public class MenuExecutor {
         boolean supportRenameFolder = (supported & MediaObject.SUPPORT_RENAME_FOLDER) != 0;
         boolean supportMoveFolder = (supported & MediaObject.SUPPORT_MOVE_FOLDER) != 0;
         boolean supportCopy = (supported & MediaObject.SUPPORT_COPY) != 0;
+        boolean supportFavourite = (supported & MediaObject.SUPPORT_FAVOURITE) != 0;
 
         setMenuItemVisible(menu, R.id.action_delete, supportDelete);
         setMenuItemVisible(menu, R.id.action_rotate_ccw, supportRotate);
@@ -201,6 +202,7 @@ public class MenuExecutor {
         setMenuItemVisible(menu, R.id.action_rename_folder, supportRenameFolder);
         setMenuItemVisible(menu, R.id.action_move_folder, supportMoveFolder);
         setMenuItemVisible(menu, R.id.action_copy, supportCopy);
+        setMenuItemVisible(menu, R.id.action_favourite, supportFavourite);
     }
 
     public static void updateMenuForPanorama(Menu menu, boolean shareAsPanorama360,

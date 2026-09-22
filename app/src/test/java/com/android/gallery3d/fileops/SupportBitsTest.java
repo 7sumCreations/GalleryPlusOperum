@@ -47,4 +47,11 @@ public class SupportBitsTest {
         assertEquals(0, MediaObject.SUPPORT_COPY & MediaObject.SUPPORT_MOVE);
         assertEquals(0, MediaObject.SUPPORT_COPY & MediaObject.SUPPORT_MOVE_FOLDER);
     }
+
+    @Test
+    public void favouriteUsesBitTwentyTwo() {
+        assertEquals(1 << 22, MediaObject.SUPPORT_FAVOURITE);
+        assertEquals(0, MediaObject.SUPPORT_FAVOURITE & MediaObject.SUPPORT_COPY);
+        assertEquals(0, MediaObject.SUPPORT_FAVOURITE & MediaObject.SUPPORT_MOVE);
+    }
 }

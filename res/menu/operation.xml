@@ -82,4 +82,9 @@
             android:title="@string/move_folder"
             android:showAsAction="never"
             android:visible="false" />
+    <item android:id="@+id/action_favourite"
+            android:icon="@android:drawable/btn_star_big_off"
+            android:title="@string/favourite"
+            android:showAsAction="ifRoom"
+            android:visible="false" />
 </menu>

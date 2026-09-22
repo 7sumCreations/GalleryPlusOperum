@@ -1060,6 +1060,28 @@ public abstract class PhotoPage extends ActivityState implements
                 mActivity.printSelectedImage(manager.getContentUri(path));
                 return true;
             }
+            case R.id.action_favourite: {
+                final android.net.Uri uri = manager.getContentUri(path);
+                final com.android.gallery3d.fileops.ContentResolverGateway gateway =
+                        new com.android.gallery3d.fileops.ContentResolverGateway(
+                                mActivity.getAndroidContext());
+                final com.android.gallery3d.fileops.MediaItemInfo info = gateway.query(uri);
+                final boolean makeFavourite = info == null || !info.favourite;
+                java.util.ArrayList<android.net.Uri> one =
+                        new java.util.ArrayList<android.net.Uri>(1);
+                one.add(uri);
+                ((android.app.Activity) mActivity).startForegroundService(
+                        com.android.gallery3d.fileops.FileOpService.runIntent(
+                                (android.app.Activity) mActivity,
+                                makeFavourite
+                                        ? com.android.gallery3d.fileops.FileOpBatch.Kind.FAVOURITE
+                                        : com.android.gallery3d.fileops.FileOpBatch
+                                                .Kind.UNFAVOURITE,
+                                one, null,
+                                com.android.gallery3d.fileops.FileOpBatch.nextToken()));
+                item.setTitle(makeFavourite ? R.string.unfavourite : R.string.favourite);
+                return true;
+            }
             case R.id.action_delete:
                 confirmMsg = mActivity.getResources().getQuantityString(
                         R.plurals.delete_selection, 1);

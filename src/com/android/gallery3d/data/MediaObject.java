@@ -47,6 +47,7 @@ public abstract class MediaObject {
     public static final int SUPPORT_RENAME_FOLDER = 1 << 19;
     public static final int SUPPORT_MOVE_FOLDER = 1 << 20;
     public static final int SUPPORT_COPY = 1 << 21;
+    public static final int SUPPORT_FAVOURITE = 1 << 22;
     public static final int SUPPORT_ALL = 0xffffffff;
 
     // These are the bits returned from getMediaType():

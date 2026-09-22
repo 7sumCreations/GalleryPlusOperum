@@ -516,6 +516,11 @@
     <!-- Name of the album listing every hearted photo. -->
     <string name="favourites">Favourites</string>
 
+    <!-- Heart action: add the selected photos to Favourites. -->
+    <string name="favourite">Favourite</string>
+    <!-- Heart action when the photo is already a favourite. -->
+    <string name="unfavourite">Remove from Favourites</string>
+
     <!-- The title of the menu item which display online help in browser. [CHAR LIMIT=20]-->
     <string name="help">Help</string>
 
