@@ -513,6 +513,9 @@
     <!-- The label for the folder contains screenshot images. [CHAR LIMIT=20]-->
     <string name="folder_screenshot">Screenshot</string>
 
+    <!-- Name of the album listing every hearted photo. -->
+    <string name="favourites">Favourites</string>
+
     <!-- The title of the menu item which display online help in browser. [CHAR LIMIT=20]-->
     <string name="help">Help</string>
 

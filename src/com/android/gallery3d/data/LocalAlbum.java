@@ -97,6 +97,14 @@ public class LocalAlbum extends MediaSet {
                 application.getContentResolver(), bucketId));
     }
 
+    protected String getWhereClause() {
+        return mWhereClause;
+    }
+
+    protected String[] getWhereArgs() {
+        return new String[]{String.valueOf(mBucketId)};
+    }
+
     @Override
     public boolean isCameraRoll() {
         return mBucketId == MediaSetUtils.CAMERA_BUCKET_ID;
@@ -123,8 +131,8 @@ public class LocalAlbum extends MediaSet {
         ArrayList<MediaItem> list = new ArrayList<MediaItem>();
         GalleryUtils.assertNotInRenderThread();
         Cursor cursor = mResolver.query(
-                uri, mProjection, mWhereClause,
-                new String[]{String.valueOf(mBucketId)},
+                uri, mProjection, getWhereClause(),
+                getWhereArgs(),
                 mOrderClause);
         if (cursor == null) {
             Log.w(TAG, "query fail: " + uri);
@@ -234,8 +242,8 @@ public class LocalAlbum extends MediaSet {
     public int getMediaItemCount() {
         if (mCachedCount == INVALID_COUNT) {
             Cursor cursor = mResolver.query(
-                    mBaseUri, COUNT_PROJECTION, mWhereClause,
-                    new String[]{String.valueOf(mBucketId)}, null);
+                    mBaseUri, COUNT_PROJECTION, getWhereClause(),
+                    getWhereArgs(), null);
             if (cursor == null) {
                 Log.w(TAG, "query fail");
                 return 0;
@@ -275,7 +283,7 @@ public class LocalAlbum extends MediaSet {
         Cursor cursor = mResolver.query(
                 mBaseUri,
                 new String[]{MediaStore.MediaColumns.RELATIVE_PATH},
-                mWhereClause, new String[]{String.valueOf(mBucketId)}, null);
+                getWhereClause(), getWhereArgs(), null);
         if (cursor == null) return "";
         try {
             if (!cursor.moveToFirst()) return "";
@@ -293,8 +301,8 @@ public class LocalAlbum extends MediaSet {
     @Override
     public void delete() {
         GalleryUtils.assertNotInRenderThread();
-        mResolver.delete(mBaseUri, mWhereClause,
-                new String[]{String.valueOf(mBucketId)});
+        mResolver.delete(mBaseUri, getWhereClause(),
+                getWhereArgs());
     }
 
     @Override

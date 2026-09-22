@@ -129,6 +129,10 @@ public class LocalAlbumSet extends MediaSet
                         mType, mPath, entry.bucketId, entry.bucketName);
                 albums.add(album);
             }
+
+            // Favourites sits above every real folder.
+            albums.add(0, new FavouritesAlbum(
+                    FavouritesAlbum.PATH, mApplication));
             return albums;
         }
     }
