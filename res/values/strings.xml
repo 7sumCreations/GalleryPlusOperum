@@ -116,6 +116,12 @@
     <string name="new_folder">+ New folder</string>
     <!-- Hint inside the new-folder name box. -->
     <string name="new_folder_hint">Folder name</string>
+    <!-- Action shown when one folder is long-pressed. -->
+    <string name="rename_folder">Rename folder</string>
+    <!-- Title of the rename-folder dialog. -->
+    <string name="rename_folder_title">Rename folder</string>
+    <!-- Confirmation after a folder rename; %1$d is how many photos moved. -->
+    <string name="renamed_folder">Renamed. %1$d photos moved.</string>
     <!-- String Delete the selected media item(s) [CHAR LIMIT=50] -->
     <plurals name="delete_selection">
         <item quantity="one">Delete selected item?</item>

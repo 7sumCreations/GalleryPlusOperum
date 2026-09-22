@@ -519,6 +519,46 @@ public class AlbumSetPage extends ActivityState implements
         mActionModeHandler.setActionModeListener(new ActionModeListener() {
             @Override
             public boolean onActionItemClicked(MenuItem item) {
+                if (item.getItemId() == R.id.action_rename_folder) {
+                    java.util.ArrayList<Path> selected = mSelectionManager.getSelected(false);
+                    if (selected.size() != 1) return false;
+                    com.android.gallery3d.data.MediaObject object =
+                            mActivity.getDataManager().getMediaObject(selected.get(0));
+                    if (!(object instanceof com.android.gallery3d.data.LocalAlbum)) return false;
+                    final String from =
+                            ((com.android.gallery3d.data.LocalAlbum) object).getRelativePath();
+                    final android.widget.EditText input =
+                            new android.widget.EditText((android.app.Activity) mActivity);
+                    input.setText(com.android.gallery3d.fileops.RelativePaths.lastSegment(from));
+                    new android.app.AlertDialog.Builder((android.app.Activity) mActivity)
+                            .setTitle(R.string.rename_folder_title)
+                            .setView(input)
+                            .setPositiveButton(android.R.string.ok,
+                                    new android.content.DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(
+                                                android.content.DialogInterface d, int w) {
+                                            com.android.gallery3d.fileops.FolderOpResult result =
+                                                    new com.android.gallery3d.fileops.FileOpEngine(
+                                                            new com.android.gallery3d.fileops
+                                                                    .ContentResolverGateway(
+                                                                    mActivity.getAndroidContext()))
+                                                            .renameFolder(from,
+                                                                    input.getText().toString());
+                                            android.widget.Toast.makeText(
+                                                    (android.app.Activity) mActivity,
+                                                    result.ok
+                                                            ? mActivity.getString(
+                                                                    R.string.renamed_folder,
+                                                                    result.itemsChanged)
+                                                            : result.failureReason,
+                                                    android.widget.Toast.LENGTH_LONG).show();
+                                        }
+                                    })
+                            .setNegativeButton(android.R.string.cancel, null)
+                            .show();
+                    return true;
+                }
                 return onItemSelected(item);
             }
         });

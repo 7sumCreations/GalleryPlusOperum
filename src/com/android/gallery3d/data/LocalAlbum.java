@@ -264,9 +264,30 @@ public class LocalAlbum extends MediaSet {
         return mDataVersion;
     }
 
+    /**
+     * The folder this album lives in, as a MediaStore RELATIVE_PATH.
+     *
+     * AOSP resolves bucket ids by hashing directory paths with no reverse map;
+     * asking MediaStore for the RELATIVE_PATH of one item in the bucket is both
+     * exact and scoped-storage-safe.
+     */
+    public String getRelativePath() {
+        Cursor cursor = mResolver.query(
+                mBaseUri,
+                new String[]{MediaStore.MediaColumns.RELATIVE_PATH},
+                mWhereClause, new String[]{String.valueOf(mBucketId)}, null);
+        if (cursor == null) return "";
+        try {
+            if (!cursor.moveToFirst()) return "";
+            return com.android.gallery3d.fileops.RelativePaths.normalise(cursor.getString(0));
+        } finally {
+            cursor.close();
+        }
+    }
+
     @Override
     public int getSupportedOperations() {
-        return SUPPORT_SHARE | SUPPORT_INFO;
+        return SUPPORT_SHARE | SUPPORT_INFO | SUPPORT_RENAME_FOLDER | SUPPORT_MOVE_FOLDER;
     }
 
     @Override

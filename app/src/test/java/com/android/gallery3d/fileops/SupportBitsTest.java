@@ -32,4 +32,12 @@ public class SupportBitsTest {
         assertEquals(0, aospBits & MediaObject.SUPPORT_MOVE);
         assertTrue(MediaObject.SUPPORT_MOVE > MediaObject.SUPPORT_PRINT);
     }
+
+    @Test
+    public void folderBitsFollowMoveWithoutOverlapping() {
+        assertEquals(1 << 19, MediaObject.SUPPORT_RENAME_FOLDER);
+        assertEquals(1 << 20, MediaObject.SUPPORT_MOVE_FOLDER);
+        assertEquals(0, MediaObject.SUPPORT_MOVE & MediaObject.SUPPORT_RENAME_FOLDER);
+        assertEquals(0, MediaObject.SUPPORT_MOVE_FOLDER & MediaObject.SUPPORT_RENAME_FOLDER);
+    }
 }

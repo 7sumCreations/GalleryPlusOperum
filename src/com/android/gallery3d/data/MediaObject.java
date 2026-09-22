@@ -44,6 +44,8 @@ public abstract class MediaObject {
     public static final int SUPPORT_PRINT = 1 << 17;
     // Epic 1 (F-068) file operations. AOSP occupies 1<<0 .. 1<<17.
     public static final int SUPPORT_MOVE = 1 << 18;
+    public static final int SUPPORT_RENAME_FOLDER = 1 << 19;
+    public static final int SUPPORT_MOVE_FOLDER = 1 << 20;
     public static final int SUPPORT_ALL = 0xffffffff;
 
     // These are the bits returned from getMediaType():

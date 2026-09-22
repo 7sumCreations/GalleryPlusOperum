@@ -70,4 +70,8 @@
             android:title="@string/move"
             android:showAsAction="never"
             android:visible="false" />
+    <item android:id="@+id/action_rename_folder"
+            android:title="@string/rename_folder"
+            android:showAsAction="never"
+            android:visible="false" />
 </menu>
