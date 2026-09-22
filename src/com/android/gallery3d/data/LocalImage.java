@@ -35,14 +35,12 @@ import com.android.gallery3d.app.PanoramaMetadataSupport;
 import com.android.gallery3d.common.ApiHelper;
 import com.android.gallery3d.common.BitmapUtils;
 import com.android.gallery3d.exif.ExifInterface;
-import com.android.gallery3d.exif.ExifTag;
 import com.android.gallery3d.filtershow.tools.SaveImage;
 import com.android.gallery3d.util.GalleryUtils;
 import com.android.gallery3d.util.ThreadPool.Job;
 import com.android.gallery3d.util.ThreadPool.JobContext;
 import com.android.gallery3d.util.UpdateHelper;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
@@ -280,26 +278,9 @@ public class LocalImage extends LocalMediaItem {
         int rotation = (this.rotation + degrees) % 360;
         if (rotation < 0) rotation += 360;
 
-        if (mimeType.equalsIgnoreCase("image/jpeg")) {
-            ExifInterface exifInterface = new ExifInterface();
-            ExifTag tag = exifInterface.buildTag(ExifInterface.TAG_ORIENTATION,
-                    ExifInterface.getOrientationValueForRotation(rotation));
-            if(tag != null) {
-                exifInterface.setTag(tag);
-                try {
-                    exifInterface.forceRewriteExif(filePath);
-                    fileSize = new File(filePath).length();
-                    values.put(Images.Media.SIZE, fileSize);
-                } catch (FileNotFoundException e) {
-                    Log.w(TAG, "cannot find file to set exif: " + filePath);
-                } catch (IOException e) {
-                    Log.w(TAG, "cannot set exif data: " + filePath);
-                }
-            } else {
-                Log.w(TAG, "Could not build tag: " + ExifInterface.TAG_ORIENTATION);
-            }
-        }
-
+        // Scoped storage: record the rotation in MediaStore only. The old code
+        // also rewrote the EXIF through a raw java.io.File on the deprecated
+        // DATA column, which fails for any file this app does not own.
         values.put(Images.Media.ORIENTATION, rotation);
         mApplication.getContentResolver().update(baseUri, values, "_id=?",
                 new String[]{String.valueOf(id)});

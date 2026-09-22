@@ -153,4 +153,17 @@ public class ContentResolverGatewayTest {
 
         assertEquals(true, gateway.folderPathsUnder("Pictures/").contains(SOURCE));
     }
+
+    @Test
+    public void rotationIsRecordedInTheOrientationColumnOnly() throws Exception {
+        Uri uri = insertOwnedFixture(SOURCE, "gw_rotate.jpg", 1L);
+        long sizeBefore = gateway.query(uri).sizeBytes;
+
+        ContentValues values = new ContentValues();
+        values.put(MediaStore.MediaColumns.ORIENTATION, 90);
+        assertEquals(1, context.getContentResolver().update(uri, values, null, null));
+
+        // The file bytes must not have been rewritten.
+        assertEquals(sizeBefore, gateway.query(uri).sizeBytes);
+    }
 }
