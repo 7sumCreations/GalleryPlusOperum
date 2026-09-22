@@ -348,6 +348,13 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+        <receiver android:name="com.android.gallery3d.fileops.AutoFileReceiver"
+                android:exported="false">
+            <intent-filter>
+                <action android:name="com.android.gallery3d.fileops.AUTO_FILE" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
         <service android:name="com.android.gallery3d.app.PackagesMonitor$AsyncService"
                  android:permission="android.permission.BIND_JOB_SERVICE"
                  android:exported="true"/>

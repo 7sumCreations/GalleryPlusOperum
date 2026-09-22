@@ -52,6 +52,7 @@ public class GalleryAppImpl extends Application implements GalleryApp {
         PicasaSource.initialize(this);
         UsageStatistics.initialize(this);
         com.android.gallery3d.fileops.TrashPurgeReceiver.schedule(this);
+        com.android.gallery3d.fileops.AutoFileReceiver.schedule(this);
     }
 
     @Override
