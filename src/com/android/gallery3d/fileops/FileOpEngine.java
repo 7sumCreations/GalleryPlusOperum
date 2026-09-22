@@ -70,4 +70,45 @@ public class FileOpEngine {
             return FileOpResult.failed(item, failure.getMessage());
         }
     }
+
+    /** How a long-running batch reports progress and learns it has been cancelled. */
+    public interface ProgressCallback {
+        /** @param indexDone 1-based count of items finished so far. */
+        void onItemDone(int indexDone, int total, FileOpResult result);
+
+        boolean isCancelled();
+    }
+
+    /**
+     * Apply one operation to one item. Every kind in Epic 1 routes through here,
+     * so there is exactly one place that decides what "move" or "trash" means.
+     */
+    public FileOpResult applyOne(FileOpBatch.Kind kind, Uri item, String destRelativePath) {
+        switch (kind) {
+            case MOVE:
+                return move(item, destRelativePath);
+            default:
+                return FileOpResult.failed(item, "Unsupported operation: " + kind);
+        }
+    }
+
+    /**
+     * Run every item in the batch in order.
+     *
+     * Epic 1 policy: stop at the first failure and report (no resume, no rollback
+     * of the items that already succeeded). Cancel takes effect between items, so
+     * the file currently being written is always finished.
+     */
+    public void runBatch(FileOpBatch batch, ProgressCallback callback) {
+        int total = batch.items.size();
+        int index = 0;
+        for (Uri item : batch.items) {
+            if (callback.isCancelled()) return;
+            FileOpResult result = applyOne(batch.kind, item, batch.destRelativePath);
+            batch.results.add(result);
+            index++;
+            callback.onItemDone(index, total, result);
+            if (result.status == FileOpResult.Status.FAILED) return;
+        }
+    }
 }
