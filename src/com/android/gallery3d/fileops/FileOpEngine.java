@@ -186,6 +186,68 @@ public class FileOpEngine {
         }
     }
 
+    /** How long a trashed item survives before purgeExpiredTrash removes it. */
+    public static final long TRASH_RETENTION_MILLIS = 30L * 24L * 60L * 60L * 1000L;
+
+    /** Move to the system trash. The file stays on disk with IS_TRASHED set. */
+    public FileOpResult trash(Uri item) {
+        return setTrashedFlag(item, true);
+    }
+
+    /** Bring an item back out of the trash, to exactly where it was. */
+    public FileOpResult restore(Uri item) {
+        return setTrashedFlag(item, false);
+    }
+
+    private FileOpResult setTrashedFlag(Uri item, boolean trashed) {
+        MediaItemInfo info = mGateway.query(item);
+        if (info == null) return FileOpResult.failed(item, "Item no longer exists");
+        try {
+            mGateway.setTrashed(item, trashed);
+            return FileOpResult.ok(item, item, info.relativePath, info.displayName,
+                    info.favourite);
+        } catch (PendingConsentException consent) {
+            return FileOpResult.consentRequired(item, consent.intentSender);
+        } catch (IOException failure) {
+            return FileOpResult.failed(item, failure.getMessage());
+        }
+    }
+
+    /** Destroy the file. There is no coming back from this one. */
+    public FileOpResult deleteForever(Uri item) {
+        MediaItemInfo info = mGateway.query(item);
+        if (info == null) return FileOpResult.failed(item, "Item no longer exists");
+        try {
+            mGateway.deletePermanently(item);
+            return FileOpResult.ok(item, null, info.relativePath, info.displayName,
+                    info.favourite);
+        } catch (PendingConsentException consent) {
+            return FileOpResult.consentRequired(item, consent.intentSender);
+        } catch (IOException failure) {
+            return FileOpResult.failed(item, failure.getMessage());
+        }
+    }
+
+    /**
+     * Permanently remove every trashed item whose retention window has closed.
+     *
+     * @return how many items were purged.
+     */
+    public int purgeExpiredTrash(long nowMillis) {
+        int purged = 0;
+        for (Uri item : mGateway.trashedOlderThan(nowMillis)) {
+            try {
+                mGateway.deletePermanently(item);
+                purged++;
+            } catch (PendingConsentException consent) {
+                // A background purge must never pop a dialog: skip and retry tomorrow.
+            } catch (IOException failure) {
+                // Same: skip and retry tomorrow.
+            }
+        }
+        return purged;
+    }
+
     /** How a long-running batch reports progress and learns it has been cancelled. */
     public interface ProgressCallback {
         /** @param indexDone 1-based count of items finished so far. */
@@ -208,6 +270,12 @@ public class FileOpEngine {
                 return setFavourite(item, true);
             case UNFAVOURITE:
                 return setFavourite(item, false);
+            case TRASH:
+                return trash(item);
+            case RESTORE:
+                return restore(item);
+            case DELETE_FOREVER:
+                return deleteForever(item);
             default:
                 return FileOpResult.failed(item, "Unsupported operation: " + kind);
         }
