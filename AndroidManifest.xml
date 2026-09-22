@@ -219,6 +219,8 @@
                 android:resource="@xml/device_filter" />
         </activity>
         <service android:name="com.android.gallery3d.ingest.IngestService" />
+        <service android:name="com.android.gallery3d.fileops.FileOpService"
+                android:exported="false" />
 
         <activity android:name="com.android.gallery3d.app.Wallpaper"
                 android:configChanges="keyboardHidden|orientation|screenSize"

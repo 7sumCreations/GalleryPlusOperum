@@ -1117,4 +1117,11 @@ CHAR LIMIT = NONE] -->
         <item quantity="one">%1$d photo</item>
         <item quantity="other">%1$d photos</item>
     </plurals>
+
+    <!-- Notification channel name for move/copy/delete progress. -->
+    <string name="file_op_channel_name">File operations</string>
+    <!-- Title of the progress notification shown while files are being moved. -->
+    <string name="file_op_in_progress">Working on your photos</string>
+    <!-- Progress text: first number is items done, second is the total. -->
+    <string name="file_op_progress_format">%1$d of %2$d</string>
 </resources>
