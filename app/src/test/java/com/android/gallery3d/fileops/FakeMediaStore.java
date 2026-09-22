@@ -238,4 +238,10 @@ public class FakeMediaStore implements MediaStoreGateway {
         }
         return Collections.unmodifiableList(uris);
     }
+
+    @Override
+    public Uri createPlaceholder(String relativePath)
+            throws PendingConsentException, IOException {
+        return addItem(relativePath, ".nomedia_placeholder", 0L);
+    }
 }

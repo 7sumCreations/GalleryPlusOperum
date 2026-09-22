@@ -54,4 +54,13 @@ public interface MediaStoreGateway {
 
     /** Non-trashed items directly in this folder with DATE_ADDED >= sinceEpochSeconds. */
     List<Uri> itemsAddedSince(String relativePath, long sinceEpochSeconds);
+
+    /**
+     * Make an otherwise-empty folder exist by writing a zero-byte placeholder
+     * into it. MediaStore has no folder rows, so this is the only way a new
+     * empty folder becomes visible.
+     *
+     * @return the placeholder's uri.
+     */
+    Uri createPlaceholder(String relativePath) throws PendingConsentException, IOException;
 }

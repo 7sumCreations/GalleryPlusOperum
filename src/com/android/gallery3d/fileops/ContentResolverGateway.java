@@ -225,6 +225,32 @@ public class ContentResolverGateway implements MediaStoreGateway {
                 false);
     }
 
+    /** Name used for the zero-byte file that keeps a new empty folder visible. */
+    public static final String PLACEHOLDER_NAME = ".nomedia_placeholder";
+
+    @Override
+    public Uri createPlaceholder(String relativePath)
+            throws PendingConsentException, IOException {
+        ContentValues values = new ContentValues();
+        values.put(MediaStore.MediaColumns.DISPLAY_NAME, PLACEHOLDER_NAME);
+        values.put(MediaStore.MediaColumns.MIME_TYPE, "application/octet-stream");
+        values.put(MediaStore.MediaColumns.RELATIVE_PATH,
+                RelativePaths.normalise(relativePath));
+        Uri collection = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+        Uri uri = mResolver.insert(collection, values);
+        if (uri == null) {
+            throw new IOException("Could not create a folder at " + relativePath);
+        }
+        OutputStream out = null;
+        try {
+            out = mResolver.openOutputStream(uri);
+            if (out != null) out.flush();
+        } finally {
+            closeQuietly(out);
+        }
+        return uri;
+    }
+
     // ---- internals -------------------------------------------------------
 
     private void applyUpdate(Uri item, ContentValues values)
