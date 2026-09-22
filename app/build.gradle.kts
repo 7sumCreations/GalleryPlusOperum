@@ -81,6 +81,7 @@ dependencies {
     implementation("androidx.legacy:legacy-support-core-ui:1.0.0")
     implementation("androidx.legacy:legacy-support-v13:1.0.0")
     implementation("androidx.core:core:1.17.0")
+    implementation("com.google.android.material:material:1.12.0")
     // external/xmp_toolkit
     implementation("com.adobe.xmp:xmpcore:5.1.2")
     // external/mp4parser

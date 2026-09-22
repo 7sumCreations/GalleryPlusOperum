@@ -35,6 +35,7 @@ import android.os.IBinder;
 import androidx.print.PrintHelper;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 
@@ -69,6 +70,42 @@ public class AbstractGalleryActivity extends Activity implements GalleryContext 
         }
     };
     private IntentFilter mMountFilter = new IntentFilter(Intent.ACTION_MEDIA_MOUNTED);
+
+    private final android.content.BroadcastReceiver mFileOpDoneReceiver =
+            new android.content.BroadcastReceiver() {
+        @Override
+        public void onReceive(android.content.Context context, android.content.Intent intent) {
+            int ok = intent.getIntExtra(
+                    com.android.gallery3d.fileops.FileOpService.EXTRA_OK_COUNT, 0);
+            int failed = intent.getIntExtra(
+                    com.android.gallery3d.fileops.FileOpService.EXTRA_FAIL_COUNT, 0);
+            if (ok == 0 && failed == 0) return;
+            showFileOpSnackbar(ok, failed);
+        }
+    };
+
+    private void showFileOpSnackbar(int ok, int failed) {
+        String message = failed > 0
+                ? getString(R.string.file_op_done_with_failures, ok, failed)
+                : getString(R.string.file_op_done, ok);
+        View root = findViewById(android.R.id.content);
+        if (root == null) return;
+        com.google.android.material.snackbar.Snackbar bar =
+                com.google.android.material.snackbar.Snackbar.make(root, message,
+                        (int) com.android.gallery3d.fileops.UndoManager.UNDO_WINDOW_MILLIS);
+        if (com.android.gallery3d.fileops.UndoManager.getInstance()
+                .hasUndoable(System.currentTimeMillis())) {
+            bar.setAction(R.string.undo, new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    startForegroundService(
+                            com.android.gallery3d.fileops.FileOpService.undoIntent(
+                                    AbstractGalleryActivity.this));
+                }
+            });
+        }
+        bar.show();
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -212,11 +249,15 @@ public class AbstractGalleryActivity extends Activity implements GalleryContext 
         }
         mGLRootView.onResume();
         mOrientationManager.resume();
+        registerReceiver(mFileOpDoneReceiver, new android.content.IntentFilter(
+                com.android.gallery3d.fileops.FileOpService.ACTION_BATCH_DONE),
+                Context.RECEIVER_NOT_EXPORTED);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+        unregisterReceiver(mFileOpDoneReceiver);
         mOrientationManager.pause();
         mGLRootView.onPause();
         mGLRootView.lockRenderThread();

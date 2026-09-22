@@ -38,6 +38,7 @@ public class FileOpService extends Service {
 
     public static final String ACTION_RUN = "com.android.gallery3d.fileops.RUN";
     public static final String ACTION_CANCEL = "com.android.gallery3d.fileops.CANCEL";
+    public static final String ACTION_UNDO = "com.android.gallery3d.fileops.UNDO";
     public static final String ACTION_BATCH_DONE = "com.android.gallery3d.fileops.BATCH_DONE";
     public static final String EXTRA_TOKEN = "com.android.gallery3d.fileops.TOKEN";
     public static final String EXTRA_KIND = "com.android.gallery3d.fileops.KIND";
@@ -69,6 +70,12 @@ public class FileOpService extends Service {
         return intent;
     }
 
+    public static Intent undoIntent(Context context) {
+        Intent intent = new Intent(context, FileOpService.class);
+        intent.setAction(ACTION_UNDO);
+        return intent;
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -91,6 +98,40 @@ public class FileOpService extends Service {
 
         if (ACTION_CANCEL.equals(intent.getAction())) {
             mCancelled.put(token, Boolean.TRUE);
+            return START_NOT_STICKY;
+        }
+
+        if (ACTION_UNDO.equals(intent.getAction())) {
+            final FileOpBatch undoable =
+                    UndoManager.getInstance().takeUndoable(System.currentTimeMillis());
+            if (undoable == null) return START_NOT_STICKY;
+            startForeground(NOTIFICATION_ID,
+                    buildNotification("undo", 0, undoable.results.size()));
+            mExecutor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        mEngine.reverseBatch(undoable, new FileOpEngine.ProgressCallback() {
+                            @Override
+                            public void onItemDone(int indexDone, int total,
+                                    FileOpResult result) {
+                                mNotifications.notify(NOTIFICATION_ID,
+                                        buildNotification("undo", indexDone, total));
+                            }
+
+                            @Override
+                            public boolean isCancelled() {
+                                return false;
+                            }
+                        });
+                    } catch (Throwable failure) {
+                        Log.e(TAG, "Undo of " + undoable.token + " threw", failure);
+                    } finally {
+                        stopForeground(true);
+                        stopSelf();
+                    }
+                }
+            });
             return START_NOT_STICKY;
         }
 

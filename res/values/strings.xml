@@ -1164,4 +1164,8 @@ CHAR LIMIT = NONE] -->
     <string name="file_op_in_progress">Working on your photos</string>
     <!-- Progress text: first number is items done, second is the total. -->
     <string name="file_op_progress_format">%1$d of %2$d</string>
+    <!-- Snackbar after a successful batch; %1$d is how many photos were handled. -->
+    <string name="file_op_done">Done. %1$d photos.</string>
+    <!-- Snackbar after a partly failed batch; %1$d succeeded, %2$d failed. -->
+    <string name="file_op_done_with_failures">%1$d done, %2$d failed.</string>
 </resources>
