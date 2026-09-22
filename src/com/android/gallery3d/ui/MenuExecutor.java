@@ -180,6 +180,7 @@ public class MenuExecutor {
         supportPrint &= PrintHelper.systemSupportsPrint();
         boolean supportMove = (supported & MediaObject.SUPPORT_MOVE) != 0;
         boolean supportRenameFolder = (supported & MediaObject.SUPPORT_RENAME_FOLDER) != 0;
+        boolean supportCopy = (supported & MediaObject.SUPPORT_COPY) != 0;
 
         setMenuItemVisible(menu, R.id.action_delete, supportDelete);
         setMenuItemVisible(menu, R.id.action_rotate_ccw, supportRotate);
@@ -197,6 +198,7 @@ public class MenuExecutor {
         setMenuItemVisible(menu, R.id.print, supportPrint);
         setMenuItemVisible(menu, R.id.action_move, supportMove);
         setMenuItemVisible(menu, R.id.action_rename_folder, supportRenameFolder);
+        setMenuItemVisible(menu, R.id.action_copy, supportCopy);
     }
 
     public static void updateMenuForPanorama(Menu menu, boolean shareAsPanorama360,

@@ -199,6 +199,23 @@ public class ActionModeHandler implements Callback, PopupList.OnPopupItemClickLi
                         });
                 return true;
             }
+            if (action == R.id.action_copy) {
+                com.android.gallery3d.fileops.FolderPicker.showWithNewFolder(
+                        (android.app.Activity) mActivity,
+                        new com.android.gallery3d.fileops.ContentResolverGateway(
+                                mActivity.getAndroidContext()),
+                        R.string.choose_folder,
+                        new com.android.gallery3d.fileops.FolderPicker.Listener() {
+                            @Override
+                            public void onFolderChosen(String relativePath) {
+                                mMenuExecutor.startFileOpBatch(
+                                        com.android.gallery3d.fileops.FileOpBatch.Kind.COPY,
+                                        relativePath);
+                                mSelectionManager.leaveSelectionMode();
+                            }
+                        });
+                return true;
+            }
             mMenuExecutor.onMenuClicked(item, confirmMsg, listener);
         } finally {
             root.unlockRenderThread();

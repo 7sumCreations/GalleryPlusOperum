@@ -74,4 +74,8 @@
             android:title="@string/rename_folder"
             android:showAsAction="never"
             android:visible="false" />
+    <item android:id="@+id/action_copy"
+            android:title="@string/copy_to_folder"
+            android:showAsAction="never"
+            android:visible="false" />
 </menu>

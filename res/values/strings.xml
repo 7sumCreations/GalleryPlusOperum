@@ -108,6 +108,8 @@
     <string name="delete">Delete</string>
     <!-- Action bar item: move the selected photos into another folder. -->
     <string name="move">Move</string>
+    <!-- Action bar item: copy the selected photos into another folder. -->
+    <string name="copy_to_folder">Copy to folder</string>
     <!-- Title of the dialog that asks which folder to move or copy into. -->
     <string name="choose_folder">Choose folder</string>
     <!-- Snackbar shown after a successful batch move. -->

@@ -40,4 +40,11 @@ public class SupportBitsTest {
         assertEquals(0, MediaObject.SUPPORT_MOVE & MediaObject.SUPPORT_RENAME_FOLDER);
         assertEquals(0, MediaObject.SUPPORT_MOVE_FOLDER & MediaObject.SUPPORT_RENAME_FOLDER);
     }
+
+    @Test
+    public void copyUsesBitTwentyOne() {
+        assertEquals(1 << 21, MediaObject.SUPPORT_COPY);
+        assertEquals(0, MediaObject.SUPPORT_COPY & MediaObject.SUPPORT_MOVE);
+        assertEquals(0, MediaObject.SUPPORT_COPY & MediaObject.SUPPORT_MOVE_FOLDER);
+    }
 }
