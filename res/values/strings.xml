@@ -1174,4 +1174,17 @@ CHAR LIMIT = NONE] -->
     <string name="file_op_done">Done. %1$d photos.</string>
     <!-- Snackbar after a partly failed batch; %1$d succeeded, %2$d failed. -->
     <string name="file_op_done_with_failures">%1$d done, %2$d failed.</string>
+
+    <!-- Title of the auto-file settings screen. -->
+    <string name="auto_file_title">Auto-file new photos</string>
+    <!-- On/off switch for the auto-file rule. -->
+    <string name="auto_file_enabled_title">File new photos automatically</string>
+    <!-- Explanation under the on/off switch. -->
+    <string name="auto_file_enabled_summary">Move new photos into Pictures/year/month by the date they were taken. Photos with no date stay where they are.</string>
+    <!-- Which folder the rule watches. -->
+    <string name="auto_file_folder_title">Watch this folder</string>
+    <string name="auto_file_folder_summary">Only photos added to this folder are filed. Default: DCIM/Camera</string>
+    <!-- How long to wait before moving. -->
+    <string name="auto_file_delay_title">Wait before moving</string>
+    <string name="auto_file_delay_summary">Minutes to leave a new photo alone before filing it, so other apps can finish with it. Default: 5</string>
 </resources>
