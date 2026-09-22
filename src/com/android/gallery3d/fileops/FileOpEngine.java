@@ -13,6 +13,9 @@ import java.io.IOException;
  */
 public class FileOpEngine {
 
+    /** Zero-byte file that keeps a newly created empty folder visible. */
+    public static final String PLACEHOLDER_NAME = ".nomedia_placeholder";
+
     private final MediaStoreGateway mGateway;
 
     public FileOpEngine(MediaStoreGateway gateway) {
@@ -102,13 +105,45 @@ public class FileOpEngine {
     public void runBatch(FileOpBatch batch, ProgressCallback callback) {
         int total = batch.items.size();
         int index = 0;
+        boolean everythingSucceeded = true;
         for (Uri item : batch.items) {
-            if (callback.isCancelled()) return;
+            if (callback.isCancelled()) {
+                everythingSucceeded = false;
+                break;
+            }
             FileOpResult result = applyOne(batch.kind, item, batch.destRelativePath);
             batch.results.add(result);
             index++;
             callback.onItemDone(index, total, result);
-            if (result.status == FileOpResult.Status.FAILED) return;
+            if (result.status == FileOpResult.Status.FAILED) {
+                everythingSucceeded = false;
+                break;
+            }
+        }
+        if (everythingSucceeded && batch.destRelativePath != null) {
+            removePlaceholderIn(batch.destRelativePath);
+        }
+    }
+
+    /**
+     * A folder that now holds real photos no longer needs its placeholder.
+     * Failures are deliberately swallowed: a stray placeholder is harmless,
+     * and losing the whole batch's result over one is not.
+     */
+    private void removePlaceholderIn(String relativePath) {
+        if (!mGateway.displayNamesIn(relativePath).contains(PLACEHOLDER_NAME)) return;
+        for (Uri candidate : mGateway.itemsUnder(relativePath)) {
+            MediaItemInfo info = mGateway.query(candidate);
+            if (info == null) continue;
+            if (!info.relativePath.equals(RelativePaths.normalise(relativePath))) continue;
+            if (!PLACEHOLDER_NAME.equals(info.displayName)) continue;
+            try {
+                mGateway.deletePermanently(candidate);
+            } catch (PendingConsentException consent) {
+                return;
+            } catch (IOException failure) {
+                return;
+            }
         }
     }
 }
