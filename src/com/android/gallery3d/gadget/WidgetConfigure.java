@@ -173,7 +173,7 @@ public class WidgetConfigure extends Activity {
                 int bucketId = Integer.parseInt(path.getSuffix());
                 // If the chosen album is a local album, find relative path
                 // Otherwise, leave the relative path field empty
-                relativePath = LocalAlbum.getRelativePath(bucketId);
+                relativePath = LocalAlbum.getRelativePath(bucketId, galleryApp.getAndroidContext());
                 Log.i(TAG, "Setting widget, album path: " + albumPath
                         + ", relative path: " + relativePath);
             }

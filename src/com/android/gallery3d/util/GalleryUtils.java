@@ -315,23 +315,14 @@ public class GalleryUtils {
         return path.toLowerCase().hashCode();
     }
 
-    // Return the local path that matches the given bucketId. If no match is
-    // found, return null
+    /**
+     * Retired in F-020. Walking external storage needs MANAGE_EXTERNAL_STORAGE
+     * under scoped storage; BucketPathResolver asks MediaStore instead.
+     *
+     * @deprecated use com.android.gallery3d.fileops.BucketPathResolver.resolve
+     */
+    @Deprecated
     public static String searchDirForPath(File dir, int bucketId) {
-        File[] files = dir.listFiles();
-        if (files != null) {
-            for (File file : files) {
-                if (file.isDirectory()) {
-                    String path = file.getAbsolutePath();
-                    if (GalleryUtils.getBucketId(path) == bucketId) {
-                        return path;
-                    } else {
-                        path = searchDirForPath(file, bucketId);
-                        if (path != null) return path;
-                    }
-                }
-            }
-        }
         return null;
     }
 
