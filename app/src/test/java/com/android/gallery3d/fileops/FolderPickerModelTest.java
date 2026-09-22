@@ -62,4 +62,22 @@ public class FolderPickerModelTest {
         assertEquals("Lisbon  ·  Pictures/Trips", FolderPicker.labelFor("Pictures/Trips/Lisbon/"));
         assertEquals("Pictures", FolderPicker.labelFor("Pictures/"));
     }
+
+    @Test
+    public void theNewFolderRowIsTheFirstEntryInTheLabelList() {
+        store.addItem("Pictures/Keep", "a.jpg", 1L);
+
+        String[] labels = FolderPicker.labelsWithNewFolderRow(store, "+ New folder");
+
+        assertEquals("+ New folder", labels[0]);
+        assertEquals("Keep  ·  Pictures", labels[1]);
+    }
+
+    @Test
+    public void indexZeroMapsToTheNewFolderSentinel() {
+        store.addItem("Pictures/Keep", "a.jpg", 1L);
+
+        assertEquals(FolderPicker.NEW_FOLDER_ROW, FolderPicker.pathForRow(store, 0));
+        assertEquals("Pictures/Keep/", FolderPicker.pathForRow(store, 1));
+    }
 }

@@ -37,4 +37,7 @@
             android:title="@string/help"
             android:visible="false"
             android:showAsAction="never" />
+    <item android:id="@+id/action_new_folder"
+            android:title="@string/new_folder"
+            android:showAsAction="never" />
 </menu>

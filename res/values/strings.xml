@@ -112,6 +112,10 @@
     <string name="choose_folder">Choose folder</string>
     <!-- Snackbar shown after a successful batch move. -->
     <string name="moved_n_items">Moved %1$d items</string>
+    <!-- First row of the folder picker, and the album-grid action. -->
+    <string name="new_folder">+ New folder</string>
+    <!-- Hint inside the new-folder name box. -->
+    <string name="new_folder_hint">Folder name</string>
     <!-- String Delete the selected media item(s) [CHAR LIMIT=50] -->
     <plurals name="delete_selection">
         <item quantity="one">Delete selected item?</item>

@@ -183,7 +183,7 @@ public class ActionModeHandler implements Callback, PopupList.OnPopupItemClickLi
                 listener = mDeleteProgressListener;
             }
             if (action == R.id.action_move) {
-                com.android.gallery3d.fileops.FolderPicker.show(
+                com.android.gallery3d.fileops.FolderPicker.showWithNewFolder(
                         (android.app.Activity) mActivity,
                         new com.android.gallery3d.fileops.ContentResolverGateway(
                                 mActivity.getAndroidContext()),

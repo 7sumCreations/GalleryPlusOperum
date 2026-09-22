@@ -618,6 +618,22 @@ public class AlbumSetPage extends ActivityState implements
                 activity.startActivity(new Intent(activity, GallerySettings.class));
                 return true;
             }
+            case R.id.action_new_folder: {
+                com.android.gallery3d.fileops.FolderPicker.promptForNewFolder(
+                        (android.app.Activity) mActivity,
+                        new com.android.gallery3d.fileops.ContentResolverGateway(
+                                mActivity.getAndroidContext()),
+                        new com.android.gallery3d.fileops.FolderPicker.Listener() {
+                            @Override
+                            public void onFolderChosen(String relativePath) {
+                                android.widget.Toast.makeText(
+                                        (android.app.Activity) mActivity,
+                                        relativePath,
+                                        android.widget.Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                return true;
+            }
             default:
                 return false;
         }
