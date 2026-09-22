@@ -261,6 +261,74 @@ public class FileOpEngine {
         return destroyed;
     }
 
+    /**
+     * Reverse a completed batch, item by item, using the previous location each
+     * FileOpResult recorded when the batch ran.
+     *
+     * Only items that actually succeeded are reversed: an item that failed never
+     * moved, so there is nothing to put back.
+     *
+     * @return the reversal batch, so callers can report how much came back.
+     */
+    public FileOpBatch reverseBatch(FileOpBatch batch, ProgressCallback callback) {
+        java.util.List<FileOpResult> reversible = new java.util.ArrayList<FileOpResult>();
+        for (FileOpResult result : batch.results) {
+            if (result.isOk()) reversible.add(result);
+        }
+
+        java.util.List<Uri> items = new java.util.ArrayList<Uri>(reversible.size());
+        for (FileOpResult result : reversible) {
+            items.add(result.resultUri != null ? result.resultUri : result.sourceUri);
+        }
+        FileOpBatch reversal = new FileOpBatch(
+                batch.token + "-undo", batch.kind, items, null);
+
+        int total = reversible.size();
+        int index = 0;
+        for (FileOpResult original : reversible) {
+            if (callback.isCancelled()) return reversal;
+            FileOpResult undone = reverseOne(batch.kind, original);
+            reversal.results.add(undone);
+            index++;
+            callback.onItemDone(index, total, undone);
+        }
+        return reversal;
+    }
+
+    private FileOpResult reverseOne(FileOpBatch.Kind kind, FileOpResult original) {
+        Uri current = original.resultUri != null ? original.resultUri : original.sourceUri;
+        switch (kind) {
+            case MOVE: {
+                // Put it back where it came from, under the name it came with.
+                MediaItemInfo info = mGateway.query(current);
+                if (info == null) return FileOpResult.failed(current, "Item no longer exists");
+                try {
+                    mGateway.updateLocation(current, original.previousRelativePath,
+                            original.previousDisplayName);
+                    return FileOpResult.ok(current, current, info.relativePath,
+                            info.displayName, info.favourite);
+                } catch (PendingConsentException consent) {
+                    return FileOpResult.consentRequired(current, consent.intentSender);
+                } catch (IOException failure) {
+                    return FileOpResult.failed(current, failure.getMessage());
+                }
+            }
+            case COPY:
+                // Undoing a copy means removing the copy. The original never moved.
+                return deleteForever(current);
+            case TRASH:
+                return restore(current);
+            case RESTORE:
+                return trash(current);
+            case FAVOURITE:
+            case UNFAVOURITE:
+                return setFavourite(current, original.previousFavourite);
+            case DELETE_FOREVER:
+            default:
+                return FileOpResult.failed(current, "This cannot be undone");
+        }
+    }
+
     /** How a long-running batch reports progress and learns it has been cancelled. */
     public interface ProgressCallback {
         /** @param indexDone 1-based count of items finished so far. */
