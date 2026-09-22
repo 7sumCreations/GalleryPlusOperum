@@ -558,6 +558,8 @@ public class AlbumPage extends ActivityState implements GalleryActionBar.Cluster
                     MediaSetUtils.isCameraSource(mMediaSetPath)
                     && GalleryUtils.isCameraAvailable(mActivity));
 
+            com.android.gallery3d.ui.MenuExecutor.setMenuItemVisibleForTrash(menu,
+                    com.android.gallery3d.data.TrashAlbum.PATH.equals(mMediaSet.getPath()));
         }
         actionBar.setSubtitle(null);
         return true;
@@ -622,6 +624,29 @@ public class AlbumPage extends ActivityState implements GalleryActionBar.Cluster
             }
             case R.id.action_camera: {
                 GalleryUtils.startCameraActivity(mActivity);
+                return true;
+            }
+            case R.id.action_empty_trash: {
+                new android.app.AlertDialog.Builder((android.app.Activity) mActivity)
+                        .setMessage(R.string.empty_trash_confirm)
+                        .setPositiveButton(android.R.string.ok,
+                                new android.content.DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(
+                                            android.content.DialogInterface d, int w) {
+                                        int count = new com.android.gallery3d.fileops.FileOpEngine(
+                                                new com.android.gallery3d.fileops
+                                                        .ContentResolverGateway(
+                                                        mActivity.getAndroidContext()))
+                                                .emptyTrash();
+                                        android.widget.Toast.makeText(
+                                                (android.app.Activity) mActivity,
+                                                mActivity.getString(R.string.emptied_trash, count),
+                                                android.widget.Toast.LENGTH_LONG).show();
+                                    }
+                                })
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show();
                 return true;
             }
             default:

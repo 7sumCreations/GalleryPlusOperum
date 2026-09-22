@@ -524,6 +524,17 @@
     <!-- Name of the album listing deleted photos awaiting purge. -->
     <string name="trash">Trash</string>
 
+    <!-- Trash action: put the selected photos back where they came from. -->
+    <string name="restore">Restore</string>
+    <!-- Trash action: destroy the selected photos for good. -->
+    <string name="delete_forever">Delete permanently</string>
+    <!-- Trash album action: destroy everything in the trash. -->
+    <string name="empty_trash">Empty trash</string>
+    <!-- Confirmation before emptying the trash. -->
+    <string name="empty_trash_confirm">Permanently delete everything in the trash? This cannot be undone.</string>
+    <!-- Result of emptying the trash; %1$d is how many photos were destroyed. -->
+    <string name="emptied_trash">Deleted %1$d photos</string>
+
     <!-- The title of the menu item which display online help in browser. [CHAR LIMIT=20]-->
     <string name="help">Help</string>
 

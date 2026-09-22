@@ -87,4 +87,12 @@
             android:title="@string/favourite"
             android:showAsAction="ifRoom"
             android:visible="false" />
+    <item android:id="@+id/action_restore"
+            android:title="@string/restore"
+            android:showAsAction="ifRoom"
+            android:visible="false" />
+    <item android:id="@+id/action_delete_forever"
+            android:title="@string/delete_forever"
+            android:showAsAction="never"
+            android:visible="false" />
 </menu>

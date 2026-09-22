@@ -54,4 +54,12 @@ public class SupportBitsTest {
         assertEquals(0, MediaObject.SUPPORT_FAVOURITE & MediaObject.SUPPORT_COPY);
         assertEquals(0, MediaObject.SUPPORT_FAVOURITE & MediaObject.SUPPORT_MOVE);
     }
+
+    @Test
+    public void trashBitsFollowFavouriteWithoutOverlapping() {
+        assertEquals(1 << 23, MediaObject.SUPPORT_RESTORE);
+        assertEquals(1 << 24, MediaObject.SUPPORT_DELETE_FOREVER);
+        assertEquals(0, MediaObject.SUPPORT_RESTORE & MediaObject.SUPPORT_FAVOURITE);
+        assertEquals(0, MediaObject.SUPPORT_DELETE_FOREVER & MediaObject.SUPPORT_RESTORE);
+    }
 }

@@ -183,6 +183,8 @@ public class MenuExecutor {
         boolean supportMoveFolder = (supported & MediaObject.SUPPORT_MOVE_FOLDER) != 0;
         boolean supportCopy = (supported & MediaObject.SUPPORT_COPY) != 0;
         boolean supportFavourite = (supported & MediaObject.SUPPORT_FAVOURITE) != 0;
+        boolean supportRestore = (supported & MediaObject.SUPPORT_RESTORE) != 0;
+        boolean supportDeleteForever = (supported & MediaObject.SUPPORT_DELETE_FOREVER) != 0;
 
         setMenuItemVisible(menu, R.id.action_delete, supportDelete);
         setMenuItemVisible(menu, R.id.action_rotate_ccw, supportRotate);
@@ -203,6 +205,8 @@ public class MenuExecutor {
         setMenuItemVisible(menu, R.id.action_move_folder, supportMoveFolder);
         setMenuItemVisible(menu, R.id.action_copy, supportCopy);
         setMenuItemVisible(menu, R.id.action_favourite, supportFavourite);
+        setMenuItemVisible(menu, R.id.action_restore, supportRestore);
+        setMenuItemVisible(menu, R.id.action_delete_forever, supportDeleteForever);
     }
 
     public static void updateMenuForPanorama(Menu menu, boolean shareAsPanorama360,
@@ -217,6 +221,11 @@ public class MenuExecutor {
     private static void setMenuItemVisible(Menu menu, int itemId, boolean visible) {
         MenuItem item = menu.findItem(itemId);
         if (item != null) item.setVisible(visible);
+    }
+
+    /** Show the Empty trash action only while the Trash album is open. */
+    public static void setMenuItemVisibleForTrash(Menu menu, boolean isTrashAlbum) {
+        setMenuItemVisible(menu, R.id.action_empty_trash, isTrashAlbum);
     }
 
     private Path getSingleSelectedPath() {

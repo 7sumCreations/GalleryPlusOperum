@@ -248,6 +248,14 @@ public class LocalImage extends LocalMediaItem {
         if (GalleryUtils.isValidLocation(latitude, longitude)) {
             operation |= SUPPORT_SHOW_ON_MAP;
         }
+        // Trashed items offer Restore and Delete permanently instead of the
+        // ordinary file operations.
+        com.android.gallery3d.fileops.MediaItemInfo trashInfo =
+                new com.android.gallery3d.fileops.ContentResolverGateway(
+                        mApplication.getAndroidContext()).query(getContentUri());
+        if (trashInfo != null && trashInfo.trashed) {
+            return SUPPORT_INFO | SUPPORT_RESTORE | SUPPORT_DELETE_FOREVER;
+        }
         return operation;
     }
 

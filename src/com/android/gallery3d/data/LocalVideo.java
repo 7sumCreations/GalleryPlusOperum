@@ -186,6 +186,14 @@ public class LocalVideo extends LocalMediaItem {
 
     @Override
     public int getSupportedOperations() {
+        // Trashed items offer Restore and Delete permanently instead of the
+        // ordinary file operations.
+        com.android.gallery3d.fileops.MediaItemInfo trashInfo =
+                new com.android.gallery3d.fileops.ContentResolverGateway(
+                        mApplication.getAndroidContext()).query(getContentUri());
+        if (trashInfo != null && trashInfo.trashed) {
+            return SUPPORT_INFO | SUPPORT_RESTORE | SUPPORT_DELETE_FOREVER;
+        }
         return SUPPORT_DELETE | SUPPORT_SHARE | SUPPORT_PLAY | SUPPORT_INFO | SUPPORT_TRIM | SUPPORT_MUTE
                 | SUPPORT_MOVE | SUPPORT_COPY | SUPPORT_FAVOURITE;
     }

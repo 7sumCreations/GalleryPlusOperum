@@ -233,6 +233,30 @@ public class ActionModeHandler implements Callback, PopupList.OnPopupItemClickLi
                 mSelectionManager.leaveSelectionMode();
                 return true;
             }
+            if (action == R.id.action_restore) {
+                mMenuExecutor.startFileOpBatch(
+                        com.android.gallery3d.fileops.FileOpBatch.Kind.RESTORE, null);
+                mSelectionManager.leaveSelectionMode();
+                return true;
+            }
+            if (action == R.id.action_delete_forever) {
+                new android.app.AlertDialog.Builder((android.app.Activity) mActivity)
+                        .setMessage(R.string.empty_trash_confirm)
+                        .setPositiveButton(android.R.string.ok,
+                                new android.content.DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(
+                                            android.content.DialogInterface d, int w) {
+                                        mMenuExecutor.startFileOpBatch(
+                                                com.android.gallery3d.fileops.FileOpBatch
+                                                        .Kind.DELETE_FOREVER, null);
+                                        mSelectionManager.leaveSelectionMode();
+                                    }
+                                })
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show();
+                return true;
+            }
             mMenuExecutor.onMenuClicked(item, confirmMsg, listener);
         } finally {
             root.unlockRenderThread();
