@@ -42,6 +42,8 @@ public abstract class MediaObject {
     public static final int SUPPORT_CAMERA_SHORTCUT = 1 << 15;
     public static final int SUPPORT_MUTE = 1 << 16;
     public static final int SUPPORT_PRINT = 1 << 17;
+    // Epic 1 (F-068) file operations. AOSP occupies 1<<0 .. 1<<17.
+    public static final int SUPPORT_MOVE = 1 << 18;
     public static final int SUPPORT_ALL = 0xffffffff;
 
     // These are the bits returned from getMediaType():
@@ -102,6 +104,11 @@ public abstract class MediaObject {
     }
 
     public void rotate(int degrees) {
+        throw new UnsupportedOperationException();
+    }
+
+    /** Destination is a canonical MediaStore RELATIVE_PATH, e.g. "Pictures/Test/". */
+    public void moveTo(String destRelativePath) {
         throw new UnsupportedOperationException();
     }
 

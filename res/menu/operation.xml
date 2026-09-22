@@ -66,4 +66,8 @@
             android:title="@string/show_on_map"
             android:showAsAction="never"
             android:visible="false" />
+    <item android:id="@+id/action_move"
+            android:title="@string/move"
+            android:showAsAction="never"
+            android:visible="false" />
 </menu>
