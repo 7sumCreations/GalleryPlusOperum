@@ -87,6 +87,7 @@ dependencies {
     implementation("com.googlecode.mp4parser:isoparser:1.0-RC-15")
 
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.16")
     androidTestImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test:core:1.6.1")
     androidTestImplementation("androidx.test:runner:1.6.2")
