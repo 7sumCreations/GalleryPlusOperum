@@ -59,6 +59,12 @@ public class MenuExecutor {
 
     private ProgressDialog mDialog;
     private Future<?> mTask;
+    /** Destination chosen in the folder picker, read by execute() for file ops. */
+    private String mPendingDestination;
+
+    public void setPendingDestination(String relativePath) {
+        mPendingDestination = relativePath;
+    }
     // wait the operation to finish when we want to stop it.
     private boolean mWaitOnStop;
     private boolean mPaused;
@@ -253,6 +259,10 @@ public class MenuExecutor {
             case R.id.action_delete:
                 title = R.string.delete;
                 break;
+            case R.id.action_move:
+                if (mPendingDestination == null) return;   // picker has not answered yet
+                title = R.string.move;
+                break;
             case R.id.action_rotate_cw:
                 title = R.string.rotate_right;
                 break;
@@ -366,6 +376,9 @@ public class MenuExecutor {
         switch (cmd) {
             case R.id.action_delete:
                 manager.delete(path);
+                break;
+            case R.id.action_move:
+                manager.moveTo(path, mPendingDestination);
                 break;
             case R.id.action_rotate_cw:
                 manager.rotate(path, 90);

@@ -182,6 +182,22 @@ public class ActionModeHandler implements Callback, PopupList.OnPopupItemClickLi
                 }
                 listener = mDeleteProgressListener;
             }
+            if (action == R.id.action_move) {
+                com.android.gallery3d.fileops.FolderPicker.show(
+                        (android.app.Activity) mActivity,
+                        new com.android.gallery3d.fileops.ContentResolverGateway(
+                                mActivity.getAndroidContext()),
+                        R.string.choose_folder,
+                        new com.android.gallery3d.fileops.FolderPicker.Listener() {
+                            @Override
+                            public void onFolderChosen(String relativePath) {
+                                mMenuExecutor.setPendingDestination(relativePath);
+                                mMenuExecutor.onMenuClicked(R.id.action_move, null, false, true);
+                                mSelectionManager.leaveSelectionMode();
+                            }
+                        });
+                return true;
+            }
             mMenuExecutor.onMenuClicked(item, confirmMsg, listener);
         } finally {
             root.unlockRenderThread();

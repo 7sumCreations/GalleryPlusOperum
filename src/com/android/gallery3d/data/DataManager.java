@@ -257,6 +257,10 @@ public class DataManager implements StitchingChangeListener {
         getMediaObject(path).rotate(degrees);
     }
 
+    public void moveTo(Path path, String destRelativePath) {
+        getMediaObject(path).moveTo(destRelativePath);
+    }
+
     public Uri getContentUri(Path path) {
         return getMediaObject(path).getContentUri();
     }

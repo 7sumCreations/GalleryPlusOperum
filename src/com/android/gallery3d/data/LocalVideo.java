@@ -204,6 +204,21 @@ public class LocalVideo extends LocalMediaItem {
     }
 
     @Override
+    public void moveTo(String destRelativePath) {
+        GalleryUtils.assertNotInRenderThread();
+        com.android.gallery3d.fileops.FileOpEngine engine =
+                new com.android.gallery3d.fileops.FileOpEngine(
+                        new com.android.gallery3d.fileops.ContentResolverGateway(
+                                mApplication.getAndroidContext()));
+        com.android.gallery3d.fileops.FileOpResult result =
+                engine.move(getContentUri(), destRelativePath);
+        if (!result.isOk()) {
+            throw new UnsupportedOperationException(
+                    "Move failed: " + result.failureReason);
+        }
+    }
+
+    @Override
     public Uri getContentUri() {
         Uri baseUri = Video.Media.EXTERNAL_CONTENT_URI;
         return baseUri.buildUpon().appendPath(String.valueOf(id)).build();
