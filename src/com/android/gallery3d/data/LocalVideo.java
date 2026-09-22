@@ -193,9 +193,17 @@ public class LocalVideo extends LocalMediaItem {
     @Override
     public void delete() {
         GalleryUtils.assertNotInRenderThread();
-        Uri baseUri = Video.Media.EXTERNAL_CONTENT_URI;
-        mApplication.getContentResolver().delete(baseUri, "_id=?",
-                new String[]{String.valueOf(id)});
+        // F-022: delete means "move to Trash". Permanent removal happens only
+        // from the Trash album or from the 30-day auto-purge.
+        com.android.gallery3d.fileops.FileOpResult result =
+                new com.android.gallery3d.fileops.FileOpEngine(
+                        new com.android.gallery3d.fileops.ContentResolverGateway(
+                                mApplication.getAndroidContext()))
+                        .trash(getContentUri());
+        if (!result.isOk()) {
+            throw new UnsupportedOperationException(
+                    "Could not move to Trash: " + result.failureReason);
+        }
     }
 
     @Override

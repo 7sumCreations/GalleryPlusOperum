@@ -174,13 +174,24 @@ public class ActionModeHandler implements Callback, PopupList.OnPopupItemClickLi
             String confirmMsg = null;
             int action = item.getItemId();
             if (action == R.id.action_delete) {
-                confirmMsg = mActivity.getResources().getQuantityString(
-                        R.plurals.delete_selection, mSelectionManager.getSelectedCount());
-                if (mDeleteProgressListener == null) {
-                    mDeleteProgressListener = new WakeLockHoldingProgressListener(mActivity,
-                            "Gallery Delete Progress Listener");
-                }
-                listener = mDeleteProgressListener;
+                final int count = mSelectionManager.getSelectedCount();
+                new android.app.AlertDialog.Builder((android.app.Activity) mActivity)
+                        .setMessage(mActivity.getResources().getQuantityString(
+                                R.plurals.delete_selection, count))
+                        .setPositiveButton(android.R.string.ok,
+                                new android.content.DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(
+                                            android.content.DialogInterface d, int w) {
+                                        mMenuExecutor.startFileOpBatch(
+                                                com.android.gallery3d.fileops.FileOpBatch
+                                                        .Kind.TRASH, null);
+                                        mSelectionManager.leaveSelectionMode();
+                                    }
+                                })
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show();
+                return true;
             }
             if (action == R.id.action_move) {
                 com.android.gallery3d.fileops.FolderPicker.showWithNewFolder(
