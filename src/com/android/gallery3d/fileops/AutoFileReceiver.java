@@ -5,6 +5,7 @@ import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.util.Log;
 
@@ -88,6 +89,32 @@ public class AutoFileReceiver extends BroadcastReceiver {
         }
         log.save(context);
         Log.i(TAG, "Auto-filed " + moved + " of " + plans.size() + " candidates");
+    }
+
+    /**
+     * Put one auto-filed photo back where it came from, using the log entry the
+     * automatic move wrote.
+     *
+     * @return true when the photo was moved back.
+     */
+    public static boolean undoOne(Context context, String itemUri) {
+        AutoFileLog log = AutoFileLog.load(context);
+        AutoFileLog.Entry entry = log.find(itemUri);
+        if (entry == null) return false;
+
+        ContentResolverGateway gateway = new ContentResolverGateway(context);
+        try {
+            gateway.updateLocation(Uri.parse(entry.itemUri), entry.fromRelativePath,
+                    entry.displayName);
+        } catch (PendingConsentException consent) {
+            return false;
+        } catch (java.io.IOException failure) {
+            Log.w(TAG, "Could not undo auto-file of " + itemUri, failure);
+            return false;
+        }
+        log.remove(itemUri);
+        log.save(context);
+        return true;
     }
 
     @Override
