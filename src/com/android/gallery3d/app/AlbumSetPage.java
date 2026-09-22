@@ -559,6 +559,37 @@ public class AlbumSetPage extends ActivityState implements
                             .show();
                     return true;
                 }
+                if (item.getItemId() == R.id.action_move_folder) {
+                    java.util.ArrayList<Path> selected = mSelectionManager.getSelected(false);
+                    if (selected.size() != 1) return false;
+                    com.android.gallery3d.data.MediaObject object =
+                            mActivity.getDataManager().getMediaObject(selected.get(0));
+                    if (!(object instanceof com.android.gallery3d.data.LocalAlbum)) return false;
+                    final String from =
+                            ((com.android.gallery3d.data.LocalAlbum) object).getRelativePath();
+                    final com.android.gallery3d.fileops.ContentResolverGateway gateway =
+                            new com.android.gallery3d.fileops.ContentResolverGateway(
+                                    mActivity.getAndroidContext());
+                    com.android.gallery3d.fileops.FolderPicker.showWithNewFolder(
+                            (android.app.Activity) mActivity, gateway,
+                            R.string.choose_parent_folder,
+                            new com.android.gallery3d.fileops.FolderPicker.Listener() {
+                                @Override
+                                public void onFolderChosen(String newParent) {
+                                    com.android.gallery3d.fileops.FolderOpResult result =
+                                            new com.android.gallery3d.fileops.FileOpEngine(gateway)
+                                                    .moveFolder(from, newParent);
+                                    android.widget.Toast.makeText(
+                                            (android.app.Activity) mActivity,
+                                            result.ok
+                                                    ? mActivity.getString(R.string.moved_folder,
+                                                            result.itemsChanged)
+                                                    : result.failureReason,
+                                            android.widget.Toast.LENGTH_LONG).show();
+                                }
+                            });
+                    return true;
+                }
                 return onItemSelected(item);
             }
         });

@@ -124,6 +124,12 @@
     <string name="rename_folder_title">Rename folder</string>
     <!-- Confirmation after a folder rename; %1$d is how many photos moved. -->
     <string name="renamed_folder">Renamed. %1$d photos moved.</string>
+    <!-- Action shown when one folder is long-pressed: move it under another folder. -->
+    <string name="move_folder">Move folder</string>
+    <!-- Title of the dialog asking which folder to nest the selected folder under. -->
+    <string name="choose_parent_folder">Move into which folder?</string>
+    <!-- Confirmation after a folder move; %1$d is how many photos moved. -->
+    <string name="moved_folder">Moved. %1$d photos moved.</string>
     <!-- String Delete the selected media item(s) [CHAR LIMIT=50] -->
     <plurals name="delete_selection">
         <item quantity="one">Delete selected item?</item>
