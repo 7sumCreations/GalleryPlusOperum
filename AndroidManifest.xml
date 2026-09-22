@@ -341,6 +341,13 @@
                 <data android:scheme="package"/>
             </intent-filter>
         </receiver>
+        <receiver android:name="com.android.gallery3d.fileops.TrashPurgeReceiver"
+                android:exported="false">
+            <intent-filter>
+                <action android:name="com.android.gallery3d.fileops.PURGE_TRASH" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
         <service android:name="com.android.gallery3d.app.PackagesMonitor$AsyncService"
                  android:permission="android.permission.BIND_JOB_SERVICE"
                  android:exported="true"/>
