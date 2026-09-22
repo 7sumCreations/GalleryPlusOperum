@@ -303,6 +303,11 @@
                 android:theme="@style/Theme.Gallery"
                 android:configChanges="orientation|keyboardHidden|screenSize" />
 
+        <activity android:name="com.android.gallery3d.fileops.ConsentActivity"
+                android:theme="@android:style/Theme.Translucent.NoTitleBar"
+                android:excludeFromRecents="true"
+                android:exported="false" />
+
         <provider android:name="com.android.gallery3d.provider.GalleryProvider"
                 android:syncable="false"
                 android:grantUriPermissions="true"
