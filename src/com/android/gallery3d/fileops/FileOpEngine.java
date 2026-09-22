@@ -248,6 +248,19 @@ public class FileOpEngine {
         return purged;
     }
 
+    /**
+     * Permanently remove every trashed item, regardless of age.
+     *
+     * @return how many items were destroyed.
+     */
+    public int emptyTrash() {
+        int destroyed = 0;
+        for (Uri item : mGateway.trashedItems()) {
+            if (deleteForever(item).isOk()) destroyed++;
+        }
+        return destroyed;
+    }
+
     /** How a long-running batch reports progress and learns it has been cancelled. */
     public interface ProgressCallback {
         /** @param indexDone 1-based count of items finished so far. */

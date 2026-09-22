@@ -63,4 +63,7 @@ public interface MediaStoreGateway {
      * @return the placeholder's uri.
      */
     Uri createPlaceholder(String relativePath) throws PendingConsentException, IOException;
+
+    /** Every trashed item, newest first. */
+    List<Uri> trashedItems();
 }

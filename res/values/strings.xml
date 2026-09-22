@@ -521,6 +521,9 @@
     <!-- Heart action when the photo is already a favourite. -->
     <string name="unfavourite">Remove from Favourites</string>
 
+    <!-- Name of the album listing deleted photos awaiting purge. -->
+    <string name="trash">Trash</string>
+
     <!-- The title of the menu item which display online help in browser. [CHAR LIMIT=20]-->
     <string name="help">Help</string>
 

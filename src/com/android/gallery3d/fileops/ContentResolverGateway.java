@@ -251,6 +251,11 @@ public class ContentResolverGateway implements MediaStoreGateway {
         return uri;
     }
 
+    @Override
+    public List<Uri> trashedItems() {
+        return queryUris(MediaStore.MediaColumns.IS_TRASHED + " = 1", null, true);
+    }
+
     // ---- internals -------------------------------------------------------
 
     private void applyUpdate(Uri item, ContentValues values)

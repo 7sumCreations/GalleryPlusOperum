@@ -46,7 +46,7 @@ public class LocalAlbum extends MediaSet {
     private static final int INVALID_COUNT = -1;
     private final String mWhereClause;
     private final String mOrderClause;
-    private final Uri mBaseUri;
+    protected final Uri mBaseUri;
     private final String[] mProjection;
 
     private final GalleryApp mApplication;
@@ -105,6 +105,11 @@ public class LocalAlbum extends MediaSet {
         return new String[]{String.valueOf(mBucketId)};
     }
 
+    /** Content uri used for queries. Overridden by albums that need to reach hidden rows. */
+    protected Uri getQueryUri() {
+        return mBaseUri;
+    }
+
     @Override
     public boolean isCameraRoll() {
         return mBucketId == MediaSetUtils.CAMERA_BUCKET_ID;
@@ -126,7 +131,7 @@ public class LocalAlbum extends MediaSet {
     @Override
     public ArrayList<MediaItem> getMediaItem(int start, int count) {
         DataManager dataManager = mApplication.getDataManager();
-        Uri uri = mBaseUri.buildUpon()
+        Uri uri = getQueryUri().buildUpon()
                 .appendQueryParameter("limit", start + "," + count).build();
         ArrayList<MediaItem> list = new ArrayList<MediaItem>();
         GalleryUtils.assertNotInRenderThread();
@@ -242,7 +247,7 @@ public class LocalAlbum extends MediaSet {
     public int getMediaItemCount() {
         if (mCachedCount == INVALID_COUNT) {
             Cursor cursor = mResolver.query(
-                    mBaseUri, COUNT_PROJECTION, getWhereClause(),
+                    getQueryUri(), COUNT_PROJECTION, getWhereClause(),
                     getWhereArgs(), null);
             if (cursor == null) {
                 Log.w(TAG, "query fail");

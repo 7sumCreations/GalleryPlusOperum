@@ -133,6 +133,9 @@ public class LocalAlbumSet extends MediaSet
             // Favourites sits above every real folder.
             albums.add(0, new FavouritesAlbum(
                     FavouritesAlbum.PATH, mApplication));
+
+            // Trash sits below every real folder.
+            albums.add(new TrashAlbum(TrashAlbum.PATH, mApplication));
             return albums;
         }
     }

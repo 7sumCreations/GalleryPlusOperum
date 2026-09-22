@@ -244,4 +244,13 @@ public class FakeMediaStore implements MediaStoreGateway {
             throws PendingConsentException, IOException {
         return addItem(relativePath, ".nomedia_placeholder", 0L);
     }
+
+    @Override
+    public List<Uri> trashedItems() {
+        List<Uri> uris = new ArrayList<Uri>();
+        for (Map.Entry<String, Row> entry : mRows.entrySet()) {
+            if (entry.getValue().trashed) uris.add(Uri.parse(entry.getKey()));
+        }
+        return uris;
+    }
 }
