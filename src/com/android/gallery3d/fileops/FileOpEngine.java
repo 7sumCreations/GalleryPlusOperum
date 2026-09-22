@@ -74,6 +74,55 @@ public class FileOpEngine {
         }
     }
 
+    /**
+     * Rewrite the RELATIVE_PATH of every item at or under fromRelativePath so
+     * that the folder appears under a new name in the same parent.
+     *
+     * Refuses rather than merges when the new name is already taken: merging is
+     * out of scope for Epic 1.
+     */
+    public FolderOpResult renameFolder(String fromRelativePath, String newName) {
+        String from = RelativePaths.normalise(fromRelativePath);
+        String nameError = RelativePaths.validateFolderName(newName);
+        if (nameError != null) return FolderOpResult.failed(from, nameError);
+
+        String to = RelativePaths.join(RelativePaths.parentOf(from), newName);
+        if (from.equals(to)) return FolderOpResult.ok(from, to, 0);
+        if (mGateway.folderPathsUnder(to).contains(to)) {
+            return FolderOpResult.failed(from,
+                    "A folder called " + newName + " already exists here");
+        }
+        return relocateTree(from, to);
+    }
+
+    /**
+     * Move every item under {@code from} so that it sits under {@code to},
+     * preserving the sub-folder structure beneath it.
+     *
+     * Shared by renameFolder (F-018) and moveFolder (F-020).
+     */
+    FolderOpResult relocateTree(String from, String to) {
+        int changed = 0;
+        for (Uri item : mGateway.itemsUnder(from)) {
+            MediaItemInfo info = mGateway.query(item);
+            if (info == null) continue;
+            String suffix = info.relativePath.substring(from.length());
+            String destination = RelativePaths.normalise(to + suffix);
+            String name = UniqueNames.freeName(
+                    mGateway.displayNamesIn(destination), info.displayName);
+            try {
+                mGateway.updateLocation(item, destination, name);
+                changed++;
+            } catch (PendingConsentException consent) {
+                return FolderOpResult.failed(from,
+                        "Permission is needed to move these photos");
+            } catch (IOException failure) {
+                return FolderOpResult.failed(from, failure.getMessage());
+            }
+        }
+        return FolderOpResult.ok(from, to, changed);
+    }
+
     /** How a long-running batch reports progress and learns it has been cancelled. */
     public interface ProgressCallback {
         /** @param indexDone 1-based count of items finished so far. */
