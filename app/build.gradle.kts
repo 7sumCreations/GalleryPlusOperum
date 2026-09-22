@@ -14,7 +14,7 @@ android {
     defaultConfig {
         applicationId = galleryApplicationId
         minSdk = 29
-        targetSdk = 29
+        targetSdk = 33
         versionCode = 40030
         versionName = "1.1.40030"
         ndk.abiFilters += listOf("arm64-v8a")
