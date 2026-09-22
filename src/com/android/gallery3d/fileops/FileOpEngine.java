@@ -74,6 +74,29 @@ public class FileOpEngine {
         }
     }
 
+    /** Create a real second file at the destination. The source is not touched. */
+    public FileOpResult copy(Uri item, String destRelativePath) {
+        String destination = RelativePaths.normalise(destRelativePath);
+        if (!RelativePaths.isUnderMediaRoot(destination)) {
+            return FileOpResult.failed(item,
+                    "Destination must be under Pictures/ or DCIM/: " + destRelativePath);
+        }
+        MediaItemInfo info = mGateway.query(item);
+        if (info == null) return FileOpResult.failed(item, "Item no longer exists");
+
+        String name = UniqueNames.freeName(
+                mGateway.displayNamesIn(destination), info.displayName);
+        try {
+            Uri copy = mGateway.copyTo(item, destination, name);
+            return FileOpResult.ok(item, copy, info.relativePath, info.displayName,
+                    info.favourite);
+        } catch (PendingConsentException consent) {
+            return FileOpResult.consentRequired(item, consent.intentSender);
+        } catch (IOException failure) {
+            return FileOpResult.failed(item, failure.getMessage());
+        }
+    }
+
     /**
      * Rewrite the RELATIVE_PATH of every item at or under fromRelativePath so
      * that the folder appears under a new name in the same parent.
@@ -139,6 +162,8 @@ public class FileOpEngine {
         switch (kind) {
             case MOVE:
                 return move(item, destRelativePath);
+            case COPY:
+                return copy(item, destRelativePath);
             default:
                 return FileOpResult.failed(item, "Unsupported operation: " + kind);
         }
