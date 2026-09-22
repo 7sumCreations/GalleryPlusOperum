@@ -171,6 +171,21 @@ public class FileOpEngine {
         return FolderOpResult.ok(from, to, changed);
     }
 
+    /** Set or clear the MediaStore favourite flag. The file never moves. */
+    public FileOpResult setFavourite(Uri item, boolean favourite) {
+        MediaItemInfo info = mGateway.query(item);
+        if (info == null) return FileOpResult.failed(item, "Item no longer exists");
+        try {
+            mGateway.setFavourite(item, favourite);
+            return FileOpResult.ok(item, item, info.relativePath, info.displayName,
+                    info.favourite);
+        } catch (PendingConsentException consent) {
+            return FileOpResult.consentRequired(item, consent.intentSender);
+        } catch (IOException failure) {
+            return FileOpResult.failed(item, failure.getMessage());
+        }
+    }
+
     /** How a long-running batch reports progress and learns it has been cancelled. */
     public interface ProgressCallback {
         /** @param indexDone 1-based count of items finished so far. */
@@ -189,6 +204,10 @@ public class FileOpEngine {
                 return move(item, destRelativePath);
             case COPY:
                 return copy(item, destRelativePath);
+            case FAVOURITE:
+                return setFavourite(item, true);
+            case UNFAVOURITE:
+                return setFavourite(item, false);
             default:
                 return FileOpResult.failed(item, "Unsupported operation: " + kind);
         }
