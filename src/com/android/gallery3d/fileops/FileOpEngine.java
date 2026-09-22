@@ -171,6 +171,37 @@ public class FileOpEngine {
         return FolderOpResult.ok(from, to, changed);
     }
 
+    /** The camera's own folder. Deleting it breaks the camera app, so we refuse. */
+    public static final String CAMERA_PATH = "DCIM/Camera/";
+
+    /**
+     * Send every item at or under a folder to the trash. The folder then
+     * disappears from the grid, because a folder with no visible items does not
+     * exist as far as MediaStore is concerned.
+     */
+    public FolderOpResult trashFolder(String relativePath) {
+        String folder = RelativePaths.normalise(relativePath);
+        if (folder.equalsIgnoreCase(CAMERA_PATH)) {
+            return FolderOpResult.failed(folder,
+                    "The camera folder cannot be deleted");
+        }
+        if (!RelativePaths.isUnderMediaRoot(folder)) {
+            return FolderOpResult.failed(folder,
+                    "Only folders under Pictures or DCIM can be deleted");
+        }
+        int changed = 0;
+        for (Uri item : mGateway.itemsUnder(folder)) {
+            FileOpResult result = trash(item);
+            if (!result.isOk()) {
+                return FolderOpResult.failed(folder, result.failureReason == null
+                        ? "Permission is needed to delete these photos"
+                        : result.failureReason);
+            }
+            changed++;
+        }
+        return FolderOpResult.ok(folder, null, changed);
+    }
+
     /** Set or clear the MediaStore favourite flag. The file never moves. */
     public FileOpResult setFavourite(Uri item, boolean favourite) {
         MediaItemInfo info = mGateway.query(item);
