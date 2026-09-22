@@ -145,9 +145,7 @@ public class FileOpService extends Service {
         done.putExtra(EXTRA_OK_COUNT, batch.okCount());
         done.putExtra(EXTRA_FAIL_COUNT, batch.failureCount());
         sendBroadcast(done);
-        // UndoManager does not exist until F-023 Task 36. Restore this call in
-        // Task 36 Step 4 when UndoManager.getInstance().remember(FileOpBatch) lands.
-        // UndoManager.getInstance().remember(batch);
+        UndoManager.getInstance().remember(batch);
     }
 
     private Notification buildNotification(String token, int done, int total) {
