@@ -18,6 +18,7 @@ android {
         versionCode = 40030
         versionName = "1.1.40030"
         ndk.abiFilters += listOf("arm64-v8a")
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     // Point at the AOSP layout instead of copying files, so merges from the
@@ -27,6 +28,12 @@ android {
             manifest.srcFile("../AndroidManifest.xml")
             java.srcDirs("../src", "../src_pd", "../gallerycommon/src")
             res.srcDirs("../res")
+        }
+        getByName("test") {
+            java.srcDirs("src/test/java")
+        }
+        getByName("androidTest") {
+            java.srcDirs("src/androidTest/java")
         }
     }
 
@@ -62,6 +69,10 @@ android {
     lint {
         abortOnError = false
     }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 dependencies {
@@ -74,4 +85,10 @@ dependencies {
     implementation("com.adobe.xmp:xmpcore:5.1.2")
     // external/mp4parser
     implementation("com.googlecode.mp4parser:isoparser:1.0-RC-15")
+
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test:core:1.6.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
 }
