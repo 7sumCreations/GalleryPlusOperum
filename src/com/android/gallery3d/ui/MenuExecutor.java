@@ -59,12 +59,6 @@ public class MenuExecutor {
 
     private ProgressDialog mDialog;
     private Future<?> mTask;
-    /** Destination chosen in the folder picker, read by execute() for file ops. */
-    private String mPendingDestination;
-
-    public void setPendingDestination(String relativePath) {
-        mPendingDestination = relativePath;
-    }
     // wait the operation to finish when we want to stop it.
     private boolean mWaitOnStop;
     private boolean mPaused;
@@ -259,10 +253,6 @@ public class MenuExecutor {
             case R.id.action_delete:
                 title = R.string.delete;
                 break;
-            case R.id.action_move:
-                if (mPendingDestination == null) return;   // picker has not answered yet
-                title = R.string.move;
-                break;
             case R.id.action_rotate_cw:
                 title = R.string.rotate_right;
                 break;
@@ -357,6 +347,28 @@ public class MenuExecutor {
         mWaitOnStop = false;
     }
 
+    /**
+     * Hand the current selection to FileOpService. Replaces startAction() for
+     * file operations: those need a foreground service to survive backgrounding.
+     *
+     * @return the batch token, so callers can match the completion broadcast.
+     */
+    public String startFileOpBatch(
+            com.android.gallery3d.fileops.FileOpBatch.Kind kind, String destRelativePath) {
+        java.util.ArrayList<Path> paths = mSelectionManager.getSelected(true);
+        java.util.ArrayList<android.net.Uri> uris =
+                new java.util.ArrayList<android.net.Uri>(paths.size());
+        DataManager manager = mActivity.getDataManager();
+        for (Path path : paths) {
+            uris.add(manager.getContentUri(path));
+        }
+        String token = com.android.gallery3d.fileops.FileOpBatch.nextToken();
+        ((android.app.Activity) mActivity).startForegroundService(
+                com.android.gallery3d.fileops.FileOpService.runIntent(
+                        (android.app.Activity) mActivity, kind, uris, destRelativePath, token));
+        return token;
+    }
+
     public static String getMimeType(int type) {
         switch (type) {
             case MediaObject.MEDIA_TYPE_IMAGE :
@@ -376,9 +388,6 @@ public class MenuExecutor {
         switch (cmd) {
             case R.id.action_delete:
                 manager.delete(path);
-                break;
-            case R.id.action_move:
-                manager.moveTo(path, mPendingDestination);
                 break;
             case R.id.action_rotate_cw:
                 manager.rotate(path, 90);

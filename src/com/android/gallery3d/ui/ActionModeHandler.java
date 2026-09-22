@@ -191,8 +191,9 @@ public class ActionModeHandler implements Callback, PopupList.OnPopupItemClickLi
                         new com.android.gallery3d.fileops.FolderPicker.Listener() {
                             @Override
                             public void onFolderChosen(String relativePath) {
-                                mMenuExecutor.setPendingDestination(relativePath);
-                                mMenuExecutor.onMenuClicked(R.id.action_move, null, false, true);
+                                mMenuExecutor.startFileOpBatch(
+                                        com.android.gallery3d.fileops.FileOpBatch.Kind.MOVE,
+                                        relativePath);
                                 mSelectionManager.leaveSelectionMode();
                             }
                         });
