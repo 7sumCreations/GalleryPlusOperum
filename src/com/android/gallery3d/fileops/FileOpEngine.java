@@ -119,6 +119,31 @@ public class FileOpEngine {
     }
 
     /**
+     * Re-parent a folder: Pictures/Lisbon under Pictures/Trips becomes
+     * Pictures/Trips/Lisbon, contents and sub-folders included.
+     */
+    public FolderOpResult moveFolder(String fromRelativePath, String newParentRelativePath) {
+        String from = RelativePaths.normalise(fromRelativePath);
+        String newParent = RelativePaths.normalise(newParentRelativePath);
+
+        if (!RelativePaths.isUnderMediaRoot(newParent)) {
+            return FolderOpResult.failed(from,
+                    "Folders can only be moved under Pictures or DCIM");
+        }
+        if (newParent.startsWith(from)) {
+            return FolderOpResult.failed(from, "A folder cannot be moved inside itself");
+        }
+
+        String to = RelativePaths.join(newParent, RelativePaths.lastSegment(from));
+        if (from.equals(to)) return FolderOpResult.ok(from, to, 0);
+        if (mGateway.folderPathsUnder(to).contains(to)) {
+            return FolderOpResult.failed(from, "A folder called "
+                    + RelativePaths.lastSegment(from) + " already exists there");
+        }
+        return relocateTree(from, to);
+    }
+
+    /**
      * Move every item under {@code from} so that it sits under {@code to},
      * preserving the sub-folder structure beneath it.
      *
