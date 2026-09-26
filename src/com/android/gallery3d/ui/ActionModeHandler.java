@@ -55,9 +55,16 @@ public class ActionModeHandler implements Callback, PopupList.OnPopupItemClickLi
     private static final int MAX_SELECTED_ITEMS_FOR_SHARE_INTENT = 300;
     private static final int MAX_SELECTED_ITEMS_FOR_PANORAMA_SHARE_INTENT = 10;
 
-    private static final int SUPPORT_MULTIPLE_MASK = MediaObject.SUPPORT_DELETE
+    // Folder verbs (rename/move folder) are deliberately absent: they act on a
+    // single album, so they must not survive a multi-item selection.
+    // Package-visible so MultiSelectMaskTest can guard it: every capability bit
+    // added to MediaObject must be consciously listed here or silently dropped
+    // the moment a second item is selected.
+    static final int SUPPORT_MULTIPLE_MASK = MediaObject.SUPPORT_DELETE
             | MediaObject.SUPPORT_ROTATE | MediaObject.SUPPORT_SHARE
-            | MediaObject.SUPPORT_CACHE;
+            | MediaObject.SUPPORT_CACHE | MediaObject.SUPPORT_MOVE
+            | MediaObject.SUPPORT_COPY | MediaObject.SUPPORT_FAVOURITE
+            | MediaObject.SUPPORT_RESTORE | MediaObject.SUPPORT_DELETE_FOREVER;
 
     public interface ActionModeListener {
         public boolean onActionItemClicked(MenuItem item);
