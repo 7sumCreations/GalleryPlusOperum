@@ -225,19 +225,37 @@ public class ContentResolverGateway implements MediaStoreGateway {
                 false);
     }
 
-    /** Name used for the zero-byte file that keeps a new empty folder visible. */
-    public static final String PLACEHOLDER_NAME = ".nomedia_placeholder";
+    /**
+     * Name of the zero-byte file that keeps a new empty folder visible.
+     *
+     * It must carry an image extension and be inserted into the Images
+     * collection. The files collection permits only Download/ and Documents/ as
+     * primary directories, so inserting into Pictures/ or DCIM/ through it is
+     * rejected outright with IllegalArgumentException.
+     */
+    public static final String PLACEHOLDER_NAME = ".nomedia_placeholder.jpg";
 
     @Override
     public Uri createPlaceholder(String relativePath)
             throws PendingConsentException, IOException {
         ContentValues values = new ContentValues();
         values.put(MediaStore.MediaColumns.DISPLAY_NAME, PLACEHOLDER_NAME);
-        values.put(MediaStore.MediaColumns.MIME_TYPE, "application/octet-stream");
+        values.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg");
         values.put(MediaStore.MediaColumns.RELATIVE_PATH,
                 RelativePaths.normalise(relativePath));
-        Uri collection = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
-        Uri uri = mResolver.insert(collection, values);
+        Uri collection =
+                MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+        Uri uri;
+        try {
+            uri = mResolver.insert(collection, values);
+        } catch (SecurityException security) {
+            throw new IOException("Not permitted to create a folder at " + relativePath
+                    + ": " + security.getMessage());
+        } catch (IllegalArgumentException bad) {
+            // MediaStore refuses paths outside a collection's allowed primary
+            // directories. Surface it as a failure, never as a crash.
+            throw new IOException(bad.getMessage());
+        }
         if (uri == null) {
             throw new IOException("Could not create a folder at " + relativePath);
         }
@@ -245,6 +263,9 @@ public class ContentResolverGateway implements MediaStoreGateway {
         try {
             out = mResolver.openOutputStream(uri);
             if (out != null) out.flush();
+        } catch (SecurityException security) {
+            throw new IOException("Could not write the folder placeholder: "
+                    + security.getMessage());
         } finally {
             closeQuietly(out);
         }

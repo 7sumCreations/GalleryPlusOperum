@@ -56,6 +56,11 @@ public final class FolderCreator {
             return Outcome.error("Permission is needed to create that folder");
         } catch (IOException failure) {
             return Outcome.error(failure.getMessage());
+        } catch (RuntimeException failure) {
+            // MediaStore rejects some paths with IllegalArgumentException. This
+            // runs inside a dialog's click handler, so anything that escapes
+            // kills the process rather than failing the one operation.
+            return Outcome.error("Could not create that folder: " + failure.getMessage());
         }
     }
 }

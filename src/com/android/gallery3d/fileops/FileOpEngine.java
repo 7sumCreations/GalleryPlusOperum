@@ -14,7 +14,14 @@ import java.io.IOException;
 public class FileOpEngine {
 
     /** Zero-byte file that keeps a newly created empty folder visible. */
-    public static final String PLACEHOLDER_NAME = ".nomedia_placeholder";
+    public static final String PLACEHOLDER_NAME = ".nomedia_placeholder.jpg";
+
+    /**
+     * Cleanup matches on the stem, not the whole name: MediaStore is free to
+     * append a dedup suffix ("... (1).jpg") when it accepts the insert, and a
+     * placeholder we failed to recognise would linger in the grid forever.
+     */
+    static final String PLACEHOLDER_PREFIX = ".nomedia_placeholder";
 
     private final MediaStoreGateway mGateway;
 
@@ -429,12 +436,20 @@ public class FileOpEngine {
      * and losing the whole batch's result over one is not.
      */
     private void removePlaceholderIn(String relativePath) {
-        if (!mGateway.displayNamesIn(relativePath).contains(PLACEHOLDER_NAME)) return;
+        boolean present = false;
+        for (String name : mGateway.displayNamesIn(relativePath)) {
+            if (name != null && name.startsWith(PLACEHOLDER_PREFIX)) {
+                present = true;
+                break;
+            }
+        }
+        if (!present) return;
         for (Uri candidate : mGateway.itemsUnder(relativePath)) {
             MediaItemInfo info = mGateway.query(candidate);
             if (info == null) continue;
             if (!info.relativePath.equals(RelativePaths.normalise(relativePath))) continue;
-            if (!PLACEHOLDER_NAME.equals(info.displayName)) continue;
+            if (info.displayName == null
+                    || !info.displayName.startsWith(PLACEHOLDER_PREFIX)) continue;
             try {
                 mGateway.deletePermanently(candidate);
             } catch (PendingConsentException consent) {

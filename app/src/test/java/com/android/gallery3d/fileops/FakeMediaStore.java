@@ -242,7 +242,7 @@ public class FakeMediaStore implements MediaStoreGateway {
     @Override
     public Uri createPlaceholder(String relativePath)
             throws PendingConsentException, IOException {
-        return addItem(relativePath, ".nomedia_placeholder", 0L);
+        return addItem(relativePath, FileOpEngine.PLACEHOLDER_NAME, 0L);
     }
 
     @Override
