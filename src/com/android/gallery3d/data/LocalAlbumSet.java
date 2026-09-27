@@ -130,13 +130,36 @@ public class LocalAlbumSet extends MediaSet
                 albums.add(album);
             }
 
-            // Favourites sits above every real folder.
-            albums.add(0, new FavouritesAlbum(
-                    FavouritesAlbum.PATH, mApplication));
-
-            // Trash sits below every real folder.
-            albums.add(new TrashAlbum(TrashAlbum.PATH, mApplication));
+            // Favourites sits above every real folder, Trash below them all.
+            albums.add(0, getFavouritesAlbum(dataManager));
+            albums.add(getTrashAlbum(dataManager));
             return albums;
+        }
+    }
+
+    /**
+     * Favourites and Trash are singletons bound to a fixed Path, so they must be
+     * reused rather than rebuilt on every reload.
+     *
+     * Path.setObject asserts that the Path has no live object bound to it, so a
+     * second construction against the same PATH throws. That throw happens
+     * inside AlbumsLoader, so it takes the entire album load down with it and
+     * the grid comes back empty ("0 images/videos available") until the process
+     * is killed — the static Path registry is what force-stopping clears.
+     */
+    private MediaSet getFavouritesAlbum(DataManager manager) {
+        synchronized (DataManager.LOCK) {
+            MediaObject cached = manager.peekMediaObject(FavouritesAlbum.PATH);
+            if (cached != null) return (MediaSet) cached;
+            return new FavouritesAlbum(FavouritesAlbum.PATH, mApplication);
+        }
+    }
+
+    private MediaSet getTrashAlbum(DataManager manager) {
+        synchronized (DataManager.LOCK) {
+            MediaObject cached = manager.peekMediaObject(TrashAlbum.PATH);
+            if (cached != null) return (MediaSet) cached;
+            return new TrashAlbum(TrashAlbum.PATH, mApplication);
         }
     }
 

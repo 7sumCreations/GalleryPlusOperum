@@ -7,6 +7,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.drawable.Icon;
 import android.net.Uri;
 import android.os.IBinder;
 import android.util.Log;
@@ -35,6 +36,7 @@ public class FileOpService extends Service {
     private static final String TAG = "FileOpService";
     private static final String CHANNEL_ID = "gallery_file_ops";
     private static final int NOTIFICATION_ID = 0x0F0F;
+    private static final int UNDO_NOTIFICATION_ID = 0x0F10;
 
     public static final String ACTION_RUN = "com.android.gallery3d.fileops.RUN";
     public static final String ACTION_CANCEL = "com.android.gallery3d.fileops.CANCEL";
@@ -199,9 +201,36 @@ public class FileOpService extends Service {
                 .setSmallIcon(android.R.drawable.stat_sys_download)
                 .setProgress(total, done, false)
                 .setOngoing(true)
-                .addAction(new Notification.Action.Builder(null,
+                .addAction(new Notification.Action.Builder(
+                        Icon.createWithResource(this, android.R.drawable.ic_menu_close_clear_cancel),
                         getString(android.R.string.cancel), cancel).build())
                 .build();
+    }
+
+    /**
+     * Undo affordance for hosts that cannot show a Snackbar. Posts a short-lived
+     * notification carrying the same undo intent, which expires by itself once
+     * the undo window closes.
+     */
+    public static void showUndoNotification(Context context, String message) {
+        NotificationManager notifications = (NotificationManager)
+                context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (notifications == null) return;
+        notifications.createNotificationChannel(new NotificationChannel(
+                CHANNEL_ID, context.getString(R.string.file_op_channel_name),
+                NotificationManager.IMPORTANCE_LOW));
+        PendingIntent undo = PendingIntent.getService(context, 1, undoIntent(context),
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        notifications.notify(UNDO_NOTIFICATION_ID, new Notification.Builder(
+                context, CHANNEL_ID)
+                .setContentTitle(message)
+                .setSmallIcon(android.R.drawable.ic_menu_revert)
+                .setTimeoutAfter(UndoManager.UNDO_WINDOW_MILLIS)
+                .setAutoCancel(true)
+                .addAction(new Notification.Action.Builder(
+                        Icon.createWithResource(context, android.R.drawable.ic_menu_revert),
+                        context.getString(R.string.undo), undo).build())
+                .build());
     }
 
     @Override

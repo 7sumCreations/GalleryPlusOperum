@@ -88,23 +88,49 @@ public class AbstractGalleryActivity extends Activity implements GalleryContext 
         String message = failed > 0
                 ? getString(R.string.file_op_done_with_failures, ok, failed)
                 : getString(R.string.file_op_done, ok);
-        View root = findViewById(android.R.id.content);
-        if (root == null) return;
-        com.google.android.material.snackbar.Snackbar bar =
-                com.google.android.material.snackbar.Snackbar.make(root, message,
-                        (int) com.android.gallery3d.fileops.UndoManager.UNDO_WINDOW_MILLIS);
-        if (com.android.gallery3d.fileops.UndoManager.getInstance()
-                .hasUndoable(System.currentTimeMillis())) {
-            bar.setAction(R.string.undo, new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    startForegroundService(
-                            com.android.gallery3d.fileops.FileOpService.undoIntent(
-                                    AbstractGalleryActivity.this));
-                }
-            });
+        boolean undoable = com.android.gallery3d.fileops.UndoManager.getInstance()
+                .hasUndoable(System.currentTimeMillis());
+        // A Material Snackbar needs Material theme attributes to inflate, and
+        // this app runs on an AOSP Holo-era theme. Rather than bet the process
+        // on it, fall back to a Toast plus a notification-free undo the moment
+        // anything about the Snackbar misbehaves.
+        try {
+            View root = findViewById(android.R.id.content);
+            if (root == null) throw new IllegalStateException("no content view");
+            com.google.android.material.snackbar.Snackbar bar =
+                    com.google.android.material.snackbar.Snackbar.make(root, message,
+                            (int) com.android.gallery3d.fileops.UndoManager
+                                    .UNDO_WINDOW_MILLIS);
+            if (undoable) {
+                bar.setAction(R.string.undo, new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        startUndo();
+                    }
+                });
+            }
+            bar.show();
+        } catch (RuntimeException snackbarUnavailable) {
+            Log.w(TAG, "Snackbar unavailable, falling back to a toast",
+                    snackbarUnavailable);
+            showFileOpFallback(message, undoable);
         }
-        bar.show();
+    }
+
+    /**
+     * Undo without a Snackbar: a toast reports the result and an ongoing
+     * notification carries the Undo action for the length of the undo window.
+     */
+    private void showFileOpFallback(String message, boolean undoable) {
+        android.widget.Toast.makeText(this, message,
+                android.widget.Toast.LENGTH_LONG).show();
+        if (!undoable) return;
+        com.android.gallery3d.fileops.FileOpService.showUndoNotification(this, message);
+    }
+
+    private void startUndo() {
+        startForegroundService(
+                com.android.gallery3d.fileops.FileOpService.undoIntent(this));
     }
 
     @Override
