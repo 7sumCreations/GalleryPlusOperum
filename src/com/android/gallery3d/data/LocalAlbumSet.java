@@ -156,11 +156,9 @@ public class LocalAlbumSet extends MediaSet
     }
 
     private MediaSet getTrashAlbum(DataManager manager) {
-        synchronized (DataManager.LOCK) {
-            MediaObject cached = manager.peekMediaObject(TrashAlbum.PATH);
-            if (cached != null) return (MediaSet) cached;
-            return new TrashAlbum(TrashAlbum.PATH, mApplication);
-        }
+        // TrashAlbum.get applies the same peek-before-construct rule to the
+        // Trash and to both of its halves (trashed images, trashed videos).
+        return TrashAlbum.get(manager, mApplication);
     }
 
     private MediaSet getLocalAlbum(

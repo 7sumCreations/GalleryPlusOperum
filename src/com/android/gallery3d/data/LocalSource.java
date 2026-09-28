@@ -48,6 +48,9 @@ class LocalSource extends MediaSource {
     private static final int LOCAL_VIDEO_ITEM = 5;
     private static final int LOCAL_ALL_ALBUMSET = 6;
     private static final int LOCAL_ALL_ALBUM = 7;
+    private static final int LOCAL_TRASH_ALBUM = 8;
+    private static final int LOCAL_TRASH_IMAGE_ALBUM = 9;
+    private static final int LOCAL_TRASH_VIDEO_ALBUM = 10;
 
     private static final String TAG = "LocalSource";
 
@@ -66,6 +69,9 @@ class LocalSource extends MediaSource {
         mMatcher.add("/local/all/*", LOCAL_ALL_ALBUM);
         mMatcher.add("/local/image/item/*", LOCAL_IMAGE_ITEM);
         mMatcher.add("/local/video/item/*", LOCAL_VIDEO_ITEM);
+        mMatcher.add("/local/trash", LOCAL_TRASH_ALBUM);
+        mMatcher.add("/local/trash/image", LOCAL_TRASH_IMAGE_ALBUM);
+        mMatcher.add("/local/trash/video", LOCAL_TRASH_VIDEO_ALBUM);
 
         mUriMatcher.addURI(MediaStore.AUTHORITY,
                 "external/images/media/#", LOCAL_IMAGE_ITEM);
@@ -102,6 +108,14 @@ class LocalSource extends MediaSource {
                 return new LocalMergeAlbum(
                         path, comp, new MediaSet[] {imageSet, videoSet}, bucketId);
             }
+            // Reached when a page is restored from its path string (e.g. after
+            // process death) before the album list has built the Trash.
+            case LOCAL_TRASH_ALBUM:
+                return TrashAlbum.get(app.getDataManager(), app);
+            case LOCAL_TRASH_IMAGE_ALBUM:
+                return TrashAlbum.getHalf(app.getDataManager(), app, true);
+            case LOCAL_TRASH_VIDEO_ALBUM:
+                return TrashAlbum.getHalf(app.getDataManager(), app, false);
             case LOCAL_IMAGE_ITEM:
                 return new LocalImage(path, mApplication, mMatcher.getIntVar(0));
             case LOCAL_VIDEO_ITEM:
