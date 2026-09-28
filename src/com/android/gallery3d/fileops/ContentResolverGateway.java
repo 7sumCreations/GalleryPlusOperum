@@ -265,6 +265,10 @@ public class ContentResolverGateway implements MediaStoreGateway {
                 new String[]{String.valueOf(cutoffMillis / 1000L)}, true);
     }
 
+    /**
+     * Photos only, by design: F-025 auto-files new camera photos. Videos in
+     * the watched folder are left where they are.
+     */
     @Override
     public List<Uri> itemsAddedSince(String relativePath, long sinceEpochSeconds) {
         return queryUris(
@@ -272,7 +276,7 @@ public class ContentResolverGateway implements MediaStoreGateway {
                         + MediaStore.MediaColumns.DATE_ADDED + " >= ?",
                 new String[]{RelativePaths.normalise(relativePath),
                         String.valueOf(sinceEpochSeconds)},
-                false);
+                false, IMAGES_ONLY);
     }
 
     /**
@@ -377,12 +381,37 @@ public class ContentResolverGateway implements MediaStoreGateway {
         }
     }
 
+    /** MEDIA_TYPE filter for every list query that must see photos and videos. */
+    private static final String IMAGES_AND_VIDEOS =
+            MediaStore.Files.FileColumns.MEDIA_TYPE + " IN ("
+                    + MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE + ","
+                    + MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO + ")";
+
+    /** MEDIA_TYPE filter for queries that are deliberately about photos only. */
+    private static final String IMAGES_ONLY =
+            MediaStore.Files.FileColumns.MEDIA_TYPE + " = "
+                    + MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE;
+
+    /**
+     * Restricts a caller's selection to the given media types. The caller's
+     * clause is parenthesised so an OR inside it cannot escape the filter.
+     */
+    private static String withMediaTypes(String selection, String mediaTypes) {
+        if (selection == null || selection.isEmpty()) return mediaTypes;
+        return "(" + selection + ") AND " + mediaTypes;
+    }
+
+    /**
+     * Queries the Files collection, which holds both images and videos, so a
+     * folder operation or name check sees every item in a folder.
+     */
     private List<String> queryStrings(String column, String selection, String[] args) {
         List<String> values = new ArrayList<String>();
         try {
             Cursor cursor = mResolver.query(
-                    MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL),
-                    new String[]{column}, selection, args, null);
+                    MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL),
+                    new String[]{column}, withMediaTypes(selection, IMAGES_AND_VIDEOS),
+                    args, null);
             if (cursor == null) return values;
             try {
                 while (cursor.moveToNext()) {
@@ -400,18 +429,32 @@ public class ContentResolverGateway implements MediaStoreGateway {
     }
 
     private List<Uri> queryUris(String selection, String[] args, boolean trashedOnly) {
+        return queryUris(selection, args, trashedOnly, IMAGES_AND_VIDEOS);
+    }
+
+    /**
+     * Queries the Files collection and hands back each row's uri in its own
+     * per-type collection (Images or Video): the rest of the code, and the
+     * create*Request consent APIs, need media uris, not Files uris.
+     */
+    private List<Uri> queryUris(String selection, String[] args, boolean trashedOnly,
+            String mediaTypes) {
         List<Uri> uris = new ArrayList<Uri>();
         try {
-            Uri collection = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL);
+            Uri collection = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL);
             if (trashedOnly) collection = includeHidden(collection);
             Cursor cursor = mResolver.query(collection,
-                    new String[]{MediaStore.MediaColumns._ID}, selection, args, null);
+                    new String[]{
+                            MediaStore.MediaColumns._ID,
+                            MediaStore.Files.FileColumns.MEDIA_TYPE},
+                    withMediaTypes(selection, mediaTypes), args, null);
             if (cursor == null) return uris;
             try {
                 while (cursor.moveToNext()) {
-                    uris.add(Uri.withAppendedPath(
-                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                            String.valueOf(cursor.getLong(0))));
+                    Uri base = cursor.getInt(1) == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
+                            ? MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                            : MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+                    uris.add(Uri.withAppendedPath(base, String.valueOf(cursor.getLong(0))));
                 }
             } finally {
                 cursor.close();
