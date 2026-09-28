@@ -1,22 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
         android:title="@string/auto_file_title">
-    <SwitchPreference
-            android:key="auto_file_enabled"
-            android:title="@string/auto_file_enabled_title"
-            android:summary="@string/auto_file_enabled_summary"
-            android:defaultValue="false" />
-    <EditTextPreference
-            android:key="auto_file_watched_folder"
-            android:title="@string/auto_file_folder_title"
-            android:summary="@string/auto_file_folder_summary"
-            android:defaultValue="DCIM/Camera/"
-            android:dependency="auto_file_enabled" />
-    <EditTextPreference
-            android:key="auto_file_delay_minutes"
-            android:title="@string/auto_file_delay_title"
-            android:summary="@string/auto_file_delay_summary"
-            android:inputType="number"
-            android:defaultValue="5"
-            android:dependency="auto_file_enabled" />
+    <!-- Standing media-management grant (API 31+). GallerySettings removes this
+         category on older releases and keeps the summary in step with the real
+         grant; nothing is persisted, the system owns the state. -->
+    <PreferenceCategory
+            android:key="media_access_category"
+            android:title="@string/media_access_category_title">
+        <Preference
+                android:key="media_access_manage"
+                android:title="@string/media_access_manage_title"
+                android:persistent="false" />
+    </PreferenceCategory>
+    <PreferenceCategory
+            android:key="auto_file_category"
+            android:title="@string/auto_file_title">
+        <SwitchPreference
+                android:key="auto_file_enabled"
+                android:title="@string/auto_file_enabled_title"
+                android:summary="@string/auto_file_enabled_summary"
+                android:defaultValue="false" />
+        <EditTextPreference
+                android:key="auto_file_watched_folder"
+                android:title="@string/auto_file_folder_title"
+                android:summary="@string/auto_file_folder_summary"
+                android:defaultValue="DCIM/Camera/"
+                android:dependency="auto_file_enabled" />
+        <EditTextPreference
+                android:key="auto_file_delay_minutes"
+                android:title="@string/auto_file_delay_title"
+                android:summary="@string/auto_file_delay_summary"
+                android:inputType="number"
+                android:defaultValue="5"
+                android:dependency="auto_file_enabled" />
+    </PreferenceCategory>
 </PreferenceScreen>

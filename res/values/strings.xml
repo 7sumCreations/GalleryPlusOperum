@@ -1187,4 +1187,15 @@ CHAR LIMIT = NONE] -->
     <!-- How long to wait before moving. -->
     <string name="auto_file_delay_title">Wait before moving</string>
     <string name="auto_file_delay_summary">Minutes to leave a new photo alone before filing it, so other apps can finish with it. Default: 5</string>
+
+    <!-- Settings category for the standing media-management grant (Android 12+). -->
+    <string name="media_access_category_title">Media access</string>
+    <!-- Opens the system screen for the "manage media" special app access. -->
+    <string name="media_access_manage_title">Manage media without asking</string>
+    <!-- Summary when the grant is on. Keep neutral; do not encourage either choice. -->
+    <string name="media_access_manage_summary_allowed">Allowed. This app can modify, move or delete any photo or video on this device without asking each time. You can revoke this in system settings.</string>
+    <!-- Summary when the grant is off. Keep neutral; do not encourage either choice. -->
+    <string name="media_access_manage_summary_not_allowed">Not allowed. Allowing it would let this app modify, move or delete any photo or video on this device without asking each time. You can revoke it later in system settings.</string>
+    <!-- Toast when no system settings screen could be opened. -->
+    <string name="media_access_open_failed">Couldn\'t open system settings</string>
 </resources>
