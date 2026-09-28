@@ -95,7 +95,6 @@ public class FileOpBatchTest {
         Uri a = store.addItem("DCIM/Camera", "a.jpg", 1L);
         Uri b = store.addItem("DCIM/Camera", "b.jpg", 2L);
         Uri c = store.addItem("DCIM/Camera", "c.jpg", 3L);
-        store.destinationVolume = "abcd-1234";
         store.failWritesFor(b);
         FileOpBatch batch = new FileOpBatch("batch-4", FileOpBatch.Kind.MOVE,
                 Arrays.asList(a, b, c), "Pictures/Trip 2026");

@@ -56,7 +56,6 @@ public class PlaceholderCleanupTest {
     public void aFailedBatchLeavesThePlaceholderSoTheFolderStaysVisible() {
         FolderCreator.create(store, "Pictures", "Trip 2026");
         Uri photo = store.addItem("DCIM/Camera", "a.jpg", 1L);
-        store.destinationVolume = "abcd-1234";
         store.failWritesFor(photo);
 
         FileOpBatch batch = new FileOpBatch("b2", FileOpBatch.Kind.MOVE,

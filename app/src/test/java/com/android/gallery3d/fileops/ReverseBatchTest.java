@@ -125,12 +125,10 @@ public class ReverseBatchTest {
     public void undoSkipsItemsThatFailedTheFirstTime() {
         Uri a = store.addItem("DCIM/Camera", "a.jpg", 1L);
         Uri b = store.addItem("DCIM/Camera", "b.jpg", 2L);
-        store.destinationVolume = "abcd-1234";
         store.failWritesFor(b);
         FileOpBatch batch = new FileOpBatch("r7", FileOpBatch.Kind.MOVE,
                 Arrays.asList(a, b), "Pictures/Trip 2026");
         engine.runBatch(batch, new SilentCallback());
-        store.destinationVolume = null;
 
         FileOpBatch reversal = engine.reverseBatch(batch, new SilentCallback());
 

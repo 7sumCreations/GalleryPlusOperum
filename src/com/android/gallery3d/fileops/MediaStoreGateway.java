@@ -23,8 +23,7 @@ public interface MediaStoreGateway {
 
     /**
      * Create a second file at the destination with the same bytes and the same
-     * DATE_TAKEN. Used by copy, and by move when source and destination are on
-     * different volumes.
+     * DATE_TAKEN. Used by copy only: move never copies bytes.
      *
      * @return the Uri of the new row.
      */

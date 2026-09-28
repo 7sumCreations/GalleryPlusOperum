@@ -32,9 +32,12 @@ public class FileOpEngine {
     /**
      * Move one item into destRelativePath.
      *
-     * Same volume: one RELATIVE_PATH update, which preserves the file, its name
-     * and its DATE_TAKEN. Different volume: copy first, verify the copy landed,
-     * and only then delete the source.
+     * Always one RELATIVE_PATH update on the item's own row: no bytes are
+     * copied, and the row keeps its uri, its DATE_TAKEN and its volume.
+     *
+     * A destination is a RELATIVE_PATH only (FileOpBatch, the folder picker and
+     * auto-file never carry a volume), so a move is by definition within the
+     * item's own volume. An item on an SD card stays on that SD card.
      */
     public FileOpResult move(Uri item, String destRelativePath) {
         String destination = RelativePaths.normalise(destRelativePath);
@@ -56,23 +59,8 @@ public class FileOpEngine {
                 mGateway.displayNamesIn(destination), info.displayName);
 
         try {
-            Uri probe = mGateway.copyTo(item, destination, name);
-            MediaItemInfo copied = mGateway.query(probe);
-            boolean sameVolume = copied != null && copied.volumeName.equals(info.volumeName);
-            if (sameVolume) {
-                // Same volume: the copy was unnecessary. Throw it away and do the
-                // cheap in-place rewrite that preserves the original row identity.
-                mGateway.deletePermanently(probe);
-                mGateway.updateLocation(item, destination, name);
-                return FileOpResult.ok(item, item, info.relativePath, info.displayName,
-                        info.favourite);
-            }
-            // Cross-volume: the copy IS the move. Verify before deleting the source.
-            if (copied == null) {
-                return FileOpResult.failed(item, "Copy to " + destination + " did not land");
-            }
-            mGateway.deletePermanently(item);
-            return FileOpResult.ok(item, probe, info.relativePath, info.displayName,
+            mGateway.updateLocation(item, destination, name);
+            return FileOpResult.ok(item, item, info.relativePath, info.displayName,
                     info.favourite);
         } catch (PendingConsentException consent) {
             return FileOpResult.consentRequired(item, consent.intentSender);

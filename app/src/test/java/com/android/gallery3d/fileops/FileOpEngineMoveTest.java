@@ -3,7 +3,6 @@ package com.android.gallery3d.fileops;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 
 import android.net.Uri;
 
@@ -15,12 +14,24 @@ import org.robolectric.RobolectricTestRunner;
 @RunWith(RobolectricTestRunner.class)
 public class FileOpEngineMoveTest {
 
-    private FakeMediaStore store;
+    /** Counts copyTo calls without touching the shared fake. */
+    private static final class CountingStore extends FakeMediaStore {
+        int copies;
+
+        @Override
+        public Uri copyTo(Uri source, String relativePath, String displayName)
+                throws PendingConsentException, java.io.IOException {
+            copies++;
+            return super.copyTo(source, relativePath, displayName);
+        }
+    }
+
+    private CountingStore store;
     private FileOpEngine engine;
 
     @Before
     public void setUp() {
-        store = new FakeMediaStore();
+        store = new CountingStore();
         engine = new FileOpEngine(store);
     }
 
@@ -68,32 +79,49 @@ public class FileOpEngineMoveTest {
     }
 
     @Test
-    public void moveToADifferentVolumeCopiesThenDeletes() {
-        Uri item = store.addItem("DCIM/Camera", "IMG_0001.jpg", 1790157600000L,
-                "external_primary");
-        store.destinationVolume = "abcd-1234";   // an SD card
+    public void moveNeverCopiesBytes() {
+        Uri item = store.addItem("DCIM/Camera", "VID_0001.mp4", 1790157600000L);
+        store.row(item).mimeType = "video/mp4";
+        int rowsBefore = store.rowCount();
 
         FileOpResult result = engine.move(item, "Pictures/Test");
 
         assertEquals(FileOpResult.Status.OK, result.status);
-        assertTrue("source row must be gone after a cross-volume move",
-                store.query(item) == null);
-        assertNotNull(store.query(result.resultUri));
-        assertEquals("Pictures/Test/", store.query(result.resultUri).relativePath);
-        assertEquals(1790157600000L, store.query(result.resultUri).dateTakenMillis);
+        assertEquals("a move must not write a copy, not even a throwaway probe",
+                0, store.copies);
+        assertEquals(rowsBefore, store.rowCount());
+        assertEquals(item, result.resultUri);
     }
 
     @Test
-    public void crossVolumeMoveDoesNotDeleteTheSourceWhenTheCopyFails() {
-        Uri item = store.addItem("DCIM/Camera", "IMG_0001.jpg", 1L, "external_primary");
-        store.destinationVolume = "abcd-1234";
+    public void moveOfAnSdCardItemStaysOnTheSdCard() {
+        Uri item = store.addItem("DCIM/Camera", "IMG_0001.jpg", 1790157600000L,
+                "abcd-1234");
+
+        FileOpResult result = engine.move(item, "Pictures/Test");
+
+        assertEquals(FileOpResult.Status.OK, result.status);
+        assertEquals("the row keeps its identity", item, result.resultUri);
+        assertEquals(0, store.copies);
+        MediaItemInfo after = store.query(item);
+        assertEquals("abcd-1234", after.volumeName);
+        assertEquals("Pictures/Test/", after.relativePath);
+        assertEquals(1790157600000L, after.dateTakenMillis);
+        assertEquals("DCIM/Camera/", result.previousRelativePath);
+    }
+
+    @Test
+    public void aFailedMoveIsAHandledFailureAndLeavesTheSourceWhereItWas() {
+        Uri item = store.addItem("DCIM/Camera", "IMG_0001.jpg", 1L);
         store.failWritesFor(item);
 
         FileOpResult result = engine.move(item, "Pictures/Test");
 
         assertEquals(FileOpResult.Status.FAILED, result.status);
-        assertNotNull("source must survive a failed cross-volume move", store.query(item));
+        assertNotNull(result.failureReason);
+        assertNotNull("source must survive a failed move", store.query(item));
         assertEquals("DCIM/Camera/", store.query(item).relativePath);
+        assertEquals(0, store.copies);
     }
 
     @Test
@@ -105,6 +133,23 @@ public class FileOpEngineMoveTest {
 
         assertEquals(FileOpResult.Status.CONSENT_REQUIRED, result.status);
         assertEquals("DCIM/Camera/", store.query(item).relativePath);
+        assertEquals(0, store.copies);
+    }
+
+    @Test
+    public void aMoveRetriedAfterConsentLandsInPlace() {
+        Uri item = store.addItem("DCIM/Camera", "IMG_0001.jpg", 1L);
+        store.requireConsentFor(item, null);
+        assertEquals(FileOpResult.Status.CONSENT_REQUIRED,
+                engine.move(item, "Pictures/Test").status);
+
+        store.grantConsentFor(item);
+        FileOpResult retried = engine.move(item, "Pictures/Test");
+
+        assertEquals(FileOpResult.Status.OK, retried.status);
+        assertEquals(item, retried.resultUri);
+        assertEquals("Pictures/Test/", store.query(item).relativePath);
+        assertEquals(0, store.copies);
     }
 
     @Test
