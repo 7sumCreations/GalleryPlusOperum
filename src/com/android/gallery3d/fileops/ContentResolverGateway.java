@@ -112,8 +112,12 @@ public class ContentResolverGateway implements MediaStoreGateway {
         values.put(MediaStore.MediaColumns.DATE_TAKEN, info.dateTakenMillis);
         values.put(MediaStore.MediaColumns.IS_PENDING, 1);
 
-        Uri collection = MediaStore.Images.Media.getContentUri(
-                MediaStore.VOLUME_EXTERNAL_PRIMARY);
+        // Images rejects video MIME types, so a video copy has to go into the
+        // Video collection. Both allow DCIM/ and Pictures/, which is all the
+        // engine ever passes. A missing MIME type keeps the old Images path.
+        Uri collection = isVideo(info.mimeType)
+                ? MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+                : MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
         Uri destinationUri;
         try {
             destinationUri = mResolver.insert(collection, values);
@@ -143,6 +147,10 @@ public class ContentResolverGateway implements MediaStoreGateway {
                 out.write(buffer, 0, read);
             }
             out.flush();
+            // Close here, not quietly: some providers only report a failed write
+            // when the stream closes, and a swallowed error would publish a
+            // truncated file. The finally block's close is then a no-op.
+            out.close();
         } catch (SecurityException security) {
             deleteQuietly(destinationUri);
             throw consentFor(security, source);
@@ -164,14 +172,26 @@ public class ContentResolverGateway implements MediaStoreGateway {
         // DATE_TAKEN has to be re-asserted: the provider rewrites it when the
         // pending flag clears and it re-scans the file's EXIF.
         published.put(MediaStore.MediaColumns.DATE_TAKEN, info.dateTakenMillis);
+        int rows;
         try {
-            mResolver.update(destinationUri, published, null, null);
+            rows = mResolver.update(destinationUri, published, null, null);
         } catch (RuntimeException failure) {
             deleteQuietly(destinationUri);
             throw new IOException("Could not publish the copy at " + destinationUri
                     + ": " + failure, failure);
         }
+        if (rows == 0) {
+            // Still pending, so invisible: never report it as done, or a
+            // cross-volume move would delete the source.
+            deleteQuietly(destinationUri);
+            throw new IOException("Could not publish the copy at " + destinationUri
+                    + ": no row updated");
+        }
         return destinationUri;
+    }
+
+    private static boolean isVideo(String mimeType) {
+        return mimeType != null && mimeType.regionMatches(true, 0, "video/", 0, 6);
     }
 
     @Override
