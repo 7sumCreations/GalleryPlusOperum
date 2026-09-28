@@ -1,5 +1,6 @@
 package com.android.gallery3d.fileops;
 
+import android.app.PendingIntent;
 import android.app.RecoverableSecurityException;
 import android.content.ContentResolver;
 import android.content.ContentValues;
@@ -17,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.TreeSet;
+import java.util.function.Supplier;
 
 /**
  * The one class in Epic 1 that talks to ContentResolver and MediaStore.
@@ -154,8 +156,8 @@ public class ContentResolverGateway implements MediaStoreGateway {
         } catch (PendingConsentException direct) {
             // MANAGE_MEDIA is not granted: fall back to the system trash dialog,
             // which is the documented path for non-owned items.
-            throw new PendingConsentException(MediaStore.createTrashRequest(
-                    mResolver, Collections.singletonList(item), trashed).getIntentSender());
+            throw consentRequest("trash", item, () -> MediaStore.createTrashRequest(
+                    mResolver, Collections.singletonList(item), trashed));
         }
     }
 
@@ -167,8 +169,8 @@ public class ContentResolverGateway implements MediaStoreGateway {
         try {
             applyUpdate(item, values);
         } catch (PendingConsentException direct) {
-            throw new PendingConsentException(MediaStore.createFavoriteRequest(
-                    mResolver, Collections.singletonList(item), favourite).getIntentSender());
+            throw consentRequest("favourite", item, () -> MediaStore.createFavoriteRequest(
+                    mResolver, Collections.singletonList(item), favourite));
         }
     }
 
@@ -177,8 +179,8 @@ public class ContentResolverGateway implements MediaStoreGateway {
         try {
             mResolver.delete(item, null, null);
         } catch (SecurityException security) {
-            throw new PendingConsentException(MediaStore.createDeleteRequest(
-                    mResolver, Collections.singletonList(item)).getIntentSender());
+            throw consentRequest("delete", item, () -> MediaStore.createDeleteRequest(
+                    mResolver, Collections.singletonList(item)));
         }
     }
 
@@ -291,15 +293,40 @@ public class ContentResolverGateway implements MediaStoreGateway {
         }
     }
 
-    private PendingConsentException consentFor(SecurityException security, Uri item) {
+    private PendingConsentException consentFor(SecurityException security, Uri item)
+            throws IOException {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
                 && security instanceof RecoverableSecurityException) {
-            return new PendingConsentException(((RecoverableSecurityException) security)
-                    .getUserAction().getActionIntent().getIntentSender());
+            try {
+                return new PendingConsentException(((RecoverableSecurityException) security)
+                        .getUserAction().getActionIntent().getIntentSender());
+            } catch (RuntimeException failure) {
+                throw new IOException("Could not get the consent action for " + item
+                        + ": " + failure, failure);
+            }
         }
         Log.w(TAG, "Falling back to createWriteRequest for " + item, security);
-        return new PendingConsentException(MediaStore.createWriteRequest(
-                mResolver, Collections.singletonList(item)).getIntentSender());
+        return consentRequest("write", item, () -> MediaStore.createWriteRequest(
+                mResolver, Collections.singletonList(item)));
+    }
+
+    /**
+     * Builds the system consent dialog for one item. The create*Request APIs
+     * exist only on API 30+, and they throw for uris MediaStore rejects; both
+     * cases become an IOException so the item fails and the batch carries on.
+     */
+    private static PendingConsentException consentRequest(String what, Uri item,
+            Supplier<PendingIntent> request) throws IOException {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            throw new IOException("Cannot ask for " + what + " consent for " + item
+                    + " on API " + Build.VERSION.SDK_INT);
+        }
+        try {
+            return new PendingConsentException(request.get().getIntentSender());
+        } catch (RuntimeException failure) {
+            throw new IOException("Could not build the " + what + " request for " + item
+                    + ": " + failure, failure);
+        }
     }
 
     private List<String> queryStrings(String column, String selection, String[] args) {
