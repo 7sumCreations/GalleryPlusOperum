@@ -61,22 +61,29 @@ public class ContentResolverGateway implements MediaStoreGateway {
 
     @Override
     public MediaItemInfo query(Uri item) {
-        Cursor cursor = mResolver.query(includeHidden(item), PROJECTION, null, null, null);
-        if (cursor == null) return null;
+        // The interface has no checked exception here, and null already means
+        // "gone" to the engine: a provider failure is logged and reported as that.
         try {
-            if (!cursor.moveToFirst()) return null;
-            return new MediaItemInfo(
-                    item,
-                    cursor.getString(1),
-                    cursor.getString(2),
-                    cursor.getLong(3),
-                    cursor.getString(4),
-                    cursor.getString(5),
-                    cursor.getLong(6),
-                    cursor.getInt(7) != 0,
-                    cursor.getInt(8) != 0);
-        } finally {
-            cursor.close();
+            Cursor cursor = mResolver.query(includeHidden(item), PROJECTION, null, null, null);
+            if (cursor == null) return null;
+            try {
+                if (!cursor.moveToFirst()) return null;
+                return new MediaItemInfo(
+                        item,
+                        cursor.getString(1),
+                        cursor.getString(2),
+                        cursor.getLong(3),
+                        cursor.getString(4),
+                        cursor.getString(5),
+                        cursor.getLong(6),
+                        cursor.getInt(7) != 0,
+                        cursor.getInt(8) != 0);
+            } finally {
+                cursor.close();
+            }
+        } catch (RuntimeException failure) {
+            Log.w(TAG, "Query failed for " + item, failure);
+            return null;
         }
     }
 
@@ -107,7 +114,17 @@ public class ContentResolverGateway implements MediaStoreGateway {
 
         Uri collection = MediaStore.Images.Media.getContentUri(
                 MediaStore.VOLUME_EXTERNAL_PRIMARY);
-        Uri destinationUri = mResolver.insert(collection, values);
+        Uri destinationUri;
+        try {
+            destinationUri = mResolver.insert(collection, values);
+        } catch (SecurityException security) {
+            throw new IOException("Not permitted to create a copy at " + destination
+                    + ": " + security.getMessage());
+        } catch (IllegalArgumentException bad) {
+            // MediaStore refuses paths or MIME types the collection does not
+            // allow. Surface it as a failure, never as a crash.
+            throw new IOException(bad.getMessage());
+        }
         if (destinationUri == null) {
             throw new IOException("Could not create a row at " + destination);
         }
@@ -127,11 +144,16 @@ public class ContentResolverGateway implements MediaStoreGateway {
             }
             out.flush();
         } catch (SecurityException security) {
-            mResolver.delete(destinationUri, null, null);
+            deleteQuietly(destinationUri);
             throw consentFor(security, source);
         } catch (IOException failure) {
-            mResolver.delete(destinationUri, null, null);
+            deleteQuietly(destinationUri);
             throw failure;
+        } catch (RuntimeException failure) {
+            // IllegalArgumentException for a uri the provider rejects, or any
+            // other provider failure: fail this item, keep the batch going.
+            deleteQuietly(destinationUri);
+            throw new IOException("Could not copy " + source + ": " + failure, failure);
         } finally {
             closeQuietly(in);
             closeQuietly(out);
@@ -142,7 +164,13 @@ public class ContentResolverGateway implements MediaStoreGateway {
         // DATE_TAKEN has to be re-asserted: the provider rewrites it when the
         // pending flag clears and it re-scans the file's EXIF.
         published.put(MediaStore.MediaColumns.DATE_TAKEN, info.dateTakenMillis);
-        mResolver.update(destinationUri, published, null, null);
+        try {
+            mResolver.update(destinationUri, published, null, null);
+        } catch (RuntimeException failure) {
+            deleteQuietly(destinationUri);
+            throw new IOException("Could not publish the copy at " + destinationUri
+                    + ": " + failure, failure);
+        }
         return destinationUri;
     }
 
@@ -331,38 +359,57 @@ public class ContentResolverGateway implements MediaStoreGateway {
 
     private List<String> queryStrings(String column, String selection, String[] args) {
         List<String> values = new ArrayList<String>();
-        Cursor cursor = mResolver.query(
-                MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL),
-                new String[]{column}, selection, args, null);
-        if (cursor == null) return values;
         try {
-            while (cursor.moveToNext()) {
-                String value = cursor.getString(0);
-                if (value != null) values.add(value);
+            Cursor cursor = mResolver.query(
+                    MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL),
+                    new String[]{column}, selection, args, null);
+            if (cursor == null) return values;
+            try {
+                while (cursor.moveToNext()) {
+                    String value = cursor.getString(0);
+                    if (value != null) values.add(value);
+                }
+            } finally {
+                cursor.close();
             }
-        } finally {
-            cursor.close();
+        } catch (RuntimeException failure) {
+            Log.w(TAG, "Query for " + column + " failed", failure);
+            return new ArrayList<String>();
         }
         return values;
     }
 
     private List<Uri> queryUris(String selection, String[] args, boolean trashedOnly) {
         List<Uri> uris = new ArrayList<Uri>();
-        Uri collection = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL);
-        if (trashedOnly) collection = includeHidden(collection);
-        Cursor cursor = mResolver.query(collection,
-                new String[]{MediaStore.MediaColumns._ID}, selection, args, null);
-        if (cursor == null) return uris;
         try {
-            while (cursor.moveToNext()) {
-                uris.add(Uri.withAppendedPath(
-                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                        String.valueOf(cursor.getLong(0))));
+            Uri collection = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL);
+            if (trashedOnly) collection = includeHidden(collection);
+            Cursor cursor = mResolver.query(collection,
+                    new String[]{MediaStore.MediaColumns._ID}, selection, args, null);
+            if (cursor == null) return uris;
+            try {
+                while (cursor.moveToNext()) {
+                    uris.add(Uri.withAppendedPath(
+                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                            String.valueOf(cursor.getLong(0))));
+                }
+            } finally {
+                cursor.close();
             }
-        } finally {
-            cursor.close();
+        } catch (RuntimeException failure) {
+            Log.w(TAG, "Uri query failed", failure);
+            return new ArrayList<Uri>();
         }
         return uris;
+    }
+
+    /** Removes a half-made destination row without masking the error in flight. */
+    private void deleteQuietly(Uri uri) {
+        try {
+            mResolver.delete(uri, null, null);
+        } catch (RuntimeException failure) {
+            Log.w(TAG, "Could not clean up " + uri, failure);
+        }
     }
 
     private static void closeQuietly(java.io.Closeable closeable) {
