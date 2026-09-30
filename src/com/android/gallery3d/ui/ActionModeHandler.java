@@ -247,8 +247,11 @@ public class ActionModeHandler implements Callback, PopupList.OnPopupItemClickLi
                 return true;
             }
             if (action == R.id.action_delete_forever) {
+                int selected = mSelectionManager.getSelectedCount();
                 new android.app.AlertDialog.Builder((android.app.Activity) mActivity)
-                        .setMessage(R.string.empty_trash_confirm)
+                        .setMessage(((android.app.Activity) mActivity).getResources()
+                                .getQuantityString(R.plurals.delete_forever_confirm_selected,
+                                        selected, selected))
                         .setPositiveButton(android.R.string.ok,
                                 new android.content.DialogInterface.OnClickListener() {
                                     @Override

@@ -550,8 +550,11 @@
     <string name="delete_forever">Delete permanently</string>
     <!-- Trash album action: destroy everything in the trash. -->
     <string name="empty_trash">Empty trash</string>
-    <!-- Confirmation before emptying the trash. -->
-    <string name="empty_trash_confirm">Permanently delete everything in the trash? This cannot be undone.</string>
+    <!-- Confirmation before permanently deleting the items selected in Trash; %1$d is how many. -->
+    <plurals name="delete_forever_confirm_selected">
+        <item quantity="one">Permanently delete the %1$d selected item? This can\'t be undone.</item>
+        <item quantity="other">Permanently delete the %1$d selected items? This can\'t be undone.</item>
+    </plurals>
     <!-- Confirmation before emptying the trash; %1$d is how many items it holds. -->
     <plurals name="empty_trash_confirm_count">
         <item quantity="one">Permanently delete the %1$d item in Trash? This can\'t be undone.</item>
