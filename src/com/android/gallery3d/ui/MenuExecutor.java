@@ -399,10 +399,22 @@ public class MenuExecutor {
                     R.string.items_no_longer_exist, android.widget.Toast.LENGTH_SHORT).show();
             return null;
         }
+        return startFileOpBatchForUris((android.app.Activity) mActivity, kind,
+                destRelativePath, uris);
+    }
+
+    /**
+     * Hand content uris straight to FileOpService, for callers such as Empty
+     * Trash whose items come from a MediaStore query rather than from Paths.
+     *
+     * @return the batch token, so callers can match the completion broadcast.
+     */
+    public static String startFileOpBatchForUris(android.app.Activity activity,
+            com.android.gallery3d.fileops.FileOpBatch.Kind kind, String destRelativePath,
+            java.util.ArrayList<android.net.Uri> uris) {
         String token = com.android.gallery3d.fileops.FileOpBatch.nextToken();
-        ((android.app.Activity) mActivity).startForegroundService(
-                com.android.gallery3d.fileops.FileOpService.runIntent(
-                        (android.app.Activity) mActivity, kind, uris, destRelativePath, token));
+        activity.startForegroundService(com.android.gallery3d.fileops.FileOpService.runIntent(
+                activity, kind, uris, destRelativePath, token));
         return token;
     }
 

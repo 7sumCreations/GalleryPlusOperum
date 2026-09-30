@@ -404,6 +404,10 @@ public class FileOpService extends Service {
     }
 
     private void broadcastDone(FileOpBatch batch) {
+        // Remember first: the receiver asks UndoManager whether to offer Undo,
+        // and must see this batch (or, for a permanent delete, nothing) rather
+        // than whatever batch finished before it.
+        UndoManager.getInstance().remember(batch);
         Intent done = new Intent(ACTION_BATCH_DONE);
         done.setPackage(getPackageName());
         done.putExtra(EXTRA_TOKEN, batch.token);
@@ -411,7 +415,6 @@ public class FileOpService extends Service {
         done.putExtra(EXTRA_OK_COUNT, batch.okCount());
         done.putExtra(EXTRA_FAIL_COUNT, batch.failureCount());
         sendBroadcast(done);
-        UndoManager.getInstance().remember(batch);
     }
 
     private Notification buildNotification(String token, int done, int total) {

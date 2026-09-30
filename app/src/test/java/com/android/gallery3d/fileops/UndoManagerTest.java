@@ -99,4 +99,51 @@ public class UndoManagerTest {
 
         assertFalse(undo.hasUndoable(2_000L));
     }
+    private FileOpBatch completedDeleteForever() {
+        Uri item = store.addItem("DCIM/Camera", "gone.jpg", 1L);
+        FileOpBatch batch = new FileOpBatch("u3", FileOpBatch.Kind.DELETE_FOREVER,
+                Arrays.asList(item), null);
+        new FileOpEngine(store).runBatch(batch, new FileOpEngine.ProgressCallback() {
+            @Override
+            public void onItemDone(int indexDone, int total, FileOpResult result) {
+            }
+
+            @Override
+            public boolean isCancelled() {
+                return false;
+            }
+        });
+        return batch;
+    }
+
+    @Test
+    public void onlyAPermanentDeleteIsUnundoable() {
+        for (FileOpBatch.Kind kind : FileOpBatch.Kind.values()) {
+            assertEquals(kind.name(), kind != FileOpBatch.Kind.DELETE_FOREVER,
+                    UndoManager.isUndoable(kind));
+        }
+    }
+
+    @Test
+    public void aPermanentDeleteIsNeverOfferedUndo() {
+        FileOpBatch deleted = completedDeleteForever();
+        assertEquals("the delete itself succeeded", 1, deleted.okCount());
+
+        undo.rememberAt(deleted, 1_000L);
+
+        assertFalse(undo.hasUndoable(1_001L));
+        assertNull(undo.takeUndoable(1_001L));
+    }
+
+    @Test
+    public void aPermanentDeleteAlsoRetiresTheBatchBeforeIt() {
+        // Otherwise the snackbar after Empty trash would offer an Undo that
+        // reverses whatever move or trash happened a few seconds earlier.
+        undo.rememberAt(completedMove(), 1_000L);
+
+        undo.rememberAt(completedDeleteForever(), 2_000L);
+
+        assertFalse(undo.hasUndoable(3_000L));
+        assertNull(undo.takeUndoable(3_000L));
+    }
 }

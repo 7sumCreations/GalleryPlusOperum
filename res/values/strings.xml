@@ -552,8 +552,19 @@
     <string name="empty_trash">Empty trash</string>
     <!-- Confirmation before emptying the trash. -->
     <string name="empty_trash_confirm">Permanently delete everything in the trash? This cannot be undone.</string>
-    <!-- Result of emptying the trash; %1$d is how many photos were destroyed. -->
-    <string name="emptied_trash">Deleted %1$d photos</string>
+    <!-- Confirmation before emptying the trash; %1$d is how many items it holds. -->
+    <plurals name="empty_trash_confirm_count">
+        <item quantity="one">Permanently delete the %1$d item in Trash? This can\'t be undone.</item>
+        <item quantity="other">Permanently delete all %1$d items in Trash? This can\'t be undone.</item>
+    </plurals>
+    <!-- Shown when Empty trash is tapped but there is nothing in the trash. -->
+    <string name="trash_already_empty">Trash is already empty</string>
+    <!-- Shown when the trash could not be listed or handed to the file-op service. -->
+    <string name="empty_trash_failed">Could not empty Trash</string>
+    <!-- Confirmation before permanently deleting the photo shown in the viewer. -->
+    <string name="delete_forever_confirm_one">Permanently delete this item? This can\'t be undone.</string>
+    <!-- Shown when a Restore or Delete permanently could not be handed to the file-op service. -->
+    <string name="file_op_start_failed">Could not start that action</string>
 
     <!-- The title of the menu item which display online help in browser. [CHAR LIMIT=20]-->
     <string name="help">Help</string>
@@ -1188,6 +1199,8 @@ CHAR LIMIT = NONE] -->
     <string name="file_op_done">Done. %1$d photos.</string>
     <!-- Snackbar after a partly failed batch; %1$d succeeded, %2$d failed. -->
     <string name="file_op_done_with_failures">%1$d done, %2$d failed.</string>
+    <!-- Snackbar after a permanent delete (no Undo); %1$d is how many items were destroyed. -->
+    <string name="file_op_deleted_forever">Permanently deleted %1$d items.</string>
 
     <!-- Title of the auto-file settings screen. -->
     <string name="auto_file_title">Auto-file new photos</string>

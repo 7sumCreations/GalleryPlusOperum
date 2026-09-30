@@ -17,7 +17,9 @@
 package com.android.gallery3d.app;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Rect;
 import android.net.Uri;
@@ -25,6 +27,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.provider.MediaStore;
+import android.util.Log;
 import android.view.HapticFeedbackConstants;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -39,6 +42,8 @@ import com.android.gallery3d.data.MediaItem;
 import com.android.gallery3d.data.MediaObject;
 import com.android.gallery3d.data.MediaSet;
 import com.android.gallery3d.data.Path;
+import com.android.gallery3d.fileops.ContentResolverGateway;
+import com.android.gallery3d.fileops.FileOpBatch;
 import com.android.gallery3d.filtershow.crop.CropActivity;
 import com.android.gallery3d.filtershow.crop.CropExtras;
 import com.android.gallery3d.glrenderer.FadeTexture;
@@ -50,14 +55,19 @@ import com.android.gallery3d.ui.DetailsHelper;
 import com.android.gallery3d.ui.DetailsHelper.CloseListener;
 import com.android.gallery3d.ui.GLRoot;
 import com.android.gallery3d.ui.GLView;
+import com.android.gallery3d.ui.MenuExecutor;
 import com.android.gallery3d.ui.PhotoFallbackEffect;
 import com.android.gallery3d.ui.RelativePosition;
 import com.android.gallery3d.ui.SelectionManager;
 import com.android.gallery3d.ui.SlotView;
 import com.android.gallery3d.ui.SynchronizedHandler;
 import com.android.gallery3d.util.Future;
+import com.android.gallery3d.util.FutureListener;
 import com.android.gallery3d.util.GalleryUtils;
 import com.android.gallery3d.util.MediaSetUtils;
+import com.android.gallery3d.util.ThreadPool;
+
+import java.util.ArrayList;
 
 
 public class AlbumPage extends ActivityState implements GalleryActionBar.ClusterRunner,
@@ -632,30 +642,90 @@ public class AlbumPage extends ActivityState implements GalleryActionBar.Cluster
                 return true;
             }
             case R.id.action_empty_trash: {
-                new android.app.AlertDialog.Builder((android.app.Activity) mActivity)
-                        .setMessage(R.string.empty_trash_confirm)
-                        .setPositiveButton(android.R.string.ok,
-                                new android.content.DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(
-                                            android.content.DialogInterface d, int w) {
-                                        int count = new com.android.gallery3d.fileops.FileOpEngine(
-                                                new com.android.gallery3d.fileops
-                                                        .ContentResolverGateway(
-                                                        mActivity.getAndroidContext()))
-                                                .emptyTrash();
-                                        android.widget.Toast.makeText(
-                                                (android.app.Activity) mActivity,
-                                                mActivity.getString(R.string.emptied_trash, count),
-                                                android.widget.Toast.LENGTH_LONG).show();
-                                    }
-                                })
-                        .setNegativeButton(android.R.string.cancel, null)
-                        .show();
+                listTrashThenConfirmEmpty();
                 return true;
             }
             default:
                 return false;
+        }
+    }
+
+    /**
+     * Empty Trash, step 1: list every trashed item off the UI thread (a big
+     * Trash is a big query), then confirm with the real count.
+     *
+     * The old code ran FileOpEngine.emptyTrash() on the UI thread: it froze on
+     * a big Trash, and items this app does not own came back CONSENT_REQUIRED
+     * with nobody to ask, so they silently stayed.
+     */
+    private void listTrashThenConfirmEmpty() {
+        final Activity activity = (Activity) mActivity;
+        final Context context = mActivity.getAndroidContext();
+        mActivity.getThreadPool().submit(new ThreadPool.Job<ArrayList<Uri>>() {
+            @Override
+            public ArrayList<Uri> run(ThreadPool.JobContext jc) {
+                try {
+                    return new ArrayList<Uri>(
+                            new ContentResolverGateway(context).trashedItems());
+                } catch (RuntimeException failure) {
+                    Log.w(TAG, "Could not list the trash", failure);
+                    return null;
+                }
+            }
+        }, new FutureListener<ArrayList<Uri>>() {
+            @Override
+            public void onFutureDone(Future<ArrayList<Uri>> future) {
+                final ArrayList<Uri> trashed = future.get();
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        confirmEmptyTrash(trashed);
+                    }
+                });
+            }
+        });
+    }
+
+    /** Empty Trash, step 2: on the UI thread, with the list in hand. */
+    private void confirmEmptyTrash(final ArrayList<Uri> trashed) {
+        final Activity activity = (Activity) mActivity;
+        // The user may have left the page (or the app) while the query ran.
+        if (!mIsActive || activity.isFinishing() || activity.isDestroyed()) return;
+        if (trashed == null) {
+            Toast.makeText(activity, R.string.empty_trash_failed, Toast.LENGTH_LONG).show();
+            return;
+        }
+        if (trashed.isEmpty()) {
+            Toast.makeText(activity, R.string.trash_already_empty, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        int count = trashed.size();
+        new AlertDialog.Builder(activity)
+                .setMessage(activity.getResources().getQuantityString(
+                        R.plurals.empty_trash_confirm_count, count, count))
+                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        startEmptyTrashBatch(activity, trashed);
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    /**
+     * Empty Trash, step 3: one DELETE_FOREVER batch through FileOpService, so
+     * the whole lot gets the service's single consent dialog, progress
+     * notification and result snackbar (with no Undo: nothing comes back).
+     */
+    private static void startEmptyTrashBatch(Activity activity, ArrayList<Uri> trashed) {
+        try {
+            MenuExecutor.startFileOpBatchForUris(activity,
+                    FileOpBatch.Kind.DELETE_FOREVER, null, trashed);
+        } catch (RuntimeException failure) {
+            // e.g. the foreground service could not be started.
+            Log.w(TAG, "Could not start the empty-trash batch", failure);
+            Toast.makeText(activity, R.string.empty_trash_failed, Toast.LENGTH_LONG).show();
         }
     }
 

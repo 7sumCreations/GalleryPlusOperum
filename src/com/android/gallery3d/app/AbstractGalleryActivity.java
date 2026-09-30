@@ -80,15 +80,32 @@ public class AbstractGalleryActivity extends Activity implements GalleryContext 
             int failed = intent.getIntExtra(
                     com.android.gallery3d.fileops.FileOpService.EXTRA_FAIL_COUNT, 0);
             if (ok == 0 && failed == 0) return;
-            showFileOpSnackbar(ok, failed);
+            showFileOpSnackbar(kindOf(intent), ok, failed);
         }
     };
 
-    private void showFileOpSnackbar(int ok, int failed) {
+    /** The finished batch's kind, or null if the broadcast did not carry a valid one. */
+    private static com.android.gallery3d.fileops.FileOpBatch.Kind kindOf(Intent intent) {
+        String name = intent.getStringExtra(
+                com.android.gallery3d.fileops.FileOpService.EXTRA_KIND);
+        if (name == null) return null;
+        try {
+            return com.android.gallery3d.fileops.FileOpBatch.Kind.valueOf(name);
+        } catch (IllegalArgumentException unknown) {
+            return null;
+        }
+    }
+
+    private void showFileOpSnackbar(com.android.gallery3d.fileops.FileOpBatch.Kind kind,
+            int ok, int failed) {
+        boolean permanent = kind == com.android.gallery3d.fileops.FileOpBatch.Kind.DELETE_FOREVER;
         String message = failed > 0
                 ? getString(R.string.file_op_done_with_failures, ok, failed)
-                : getString(R.string.file_op_done, ok);
-        boolean undoable = com.android.gallery3d.fileops.UndoManager.getInstance()
+                : permanent
+                        ? getString(R.string.file_op_deleted_forever, ok)
+                        : getString(R.string.file_op_done, ok);
+        // A permanent delete is never offered Undo, whatever UndoManager holds.
+        boolean undoable = !permanent && com.android.gallery3d.fileops.UndoManager.getInstance()
                 .hasUndoable(System.currentTimeMillis());
         // A Material Snackbar needs Material theme attributes to inflate, and
         // this app runs on an AOSP Holo-era theme. Rather than bet the process
