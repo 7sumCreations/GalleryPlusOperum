@@ -32,4 +32,7 @@
             android:title="@string/empty_trash"
             android:showAsAction="never"
             android:visible="false" />
+    <item android:id="@+id/action_settings"
+            android:title="@string/settings"
+            android:showAsAction="never" />
 </menu>

@@ -626,6 +626,11 @@ public class AlbumPage extends ActivityState implements GalleryActionBar.Cluster
                 GalleryUtils.startCameraActivity(mActivity);
                 return true;
             }
+            case R.id.action_settings: {
+                mActivity.startActivity(new Intent(mActivity,
+                        com.android.gallery3d.settings.GallerySettings.class));
+                return true;
+            }
             case R.id.action_empty_trash: {
                 new android.app.AlertDialog.Builder((android.app.Activity) mActivity)
                         .setMessage(R.string.empty_trash_confirm)
