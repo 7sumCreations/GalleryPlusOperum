@@ -88,4 +88,14 @@
             android:title="@string/favourite"
             android:showAsAction="ifRoom"
             android:visible="false" />
+    <!-- Shown only for a trashed item (SUPPORT_RESTORE / SUPPORT_DELETE_FOREVER),
+         e.g. when a photo is opened full screen from Trash. -->
+    <item android:id="@+id/action_restore"
+            android:title="@string/restore"
+            android:showAsAction="ifRoom"
+            android:visible="false" />
+    <item android:id="@+id/action_delete_forever"
+            android:title="@string/delete_forever"
+            android:showAsAction="never"
+            android:visible="false" />
 </menu>

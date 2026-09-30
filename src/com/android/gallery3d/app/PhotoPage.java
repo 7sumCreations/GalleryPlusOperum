@@ -750,7 +750,9 @@ public abstract class PhotoPage extends ActivityState implements
 
         int supportedOperations = mCurrentPhoto.getSupportedOperations();
         if (mReadOnlyView) {
-            supportedOperations ^= MediaObject.SUPPORT_EDIT;
+            // Clear, not toggle: XOR would switch Edit on for an item that did
+            // not offer it (a trashed one, say).
+            supportedOperations &= ~MediaObject.SUPPORT_EDIT;
         }
         if (mSecureAlbum != null) {
             supportedOperations &= MediaObject.SUPPORT_DELETE;
@@ -1094,6 +1096,17 @@ public abstract class PhotoPage extends ActivityState implements
                 confirmSendToTrash(path);
                 return true;
             }
+            case R.id.action_restore: {
+                // Only offered for a trashed item (SUPPORT_RESTORE). Once it
+                // leaves the Trash album the viewer moves on, as with Delete.
+                startSingleItemBatch(
+                        com.android.gallery3d.fileops.FileOpBatch.Kind.RESTORE, path);
+                return true;
+            }
+            case R.id.action_delete_forever: {
+                confirmDeleteForever(path);
+                return true;
+            }
             case R.id.action_rotate_ccw:
             case R.id.action_rotate_cw:
             case R.id.action_show_on_map:
@@ -1128,21 +1141,56 @@ public abstract class PhotoPage extends ActivityState implements
                 .show();
     }
 
+    /** Delete forever cannot be undone, so it always asks first. */
+    private void confirmDeleteForever(final Path path) {
+        mHandler.removeMessages(MSG_HIDE_BARS);
+        new AlertDialog.Builder((Activity) mActivity)
+                .setMessage(R.string.delete_forever_confirm_one)
+                .setPositiveButton(android.R.string.ok,
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                startSingleItemBatch(com.android.gallery3d.fileops
+                                        .FileOpBatch.Kind.DELETE_FOREVER, path);
+                            }
+                        })
+                .setNegativeButton(android.R.string.cancel, null)
+                .setOnDismissListener(new DialogInterface.OnDismissListener() {
+                    @Override
+                    public void onDismiss(DialogInterface dialog) {
+                        refreshHidingMessage();
+                    }
+                })
+                .show();
+    }
+
     /**
      * Send one item to Trash through FileOpService. When it leaves MediaStore
      * the album reloads and PhotoDataAdapter moves on to the neighbouring item,
      * or finishes this page if the album is now empty.
      */
     private void sendToTrash(Path path) {
+        startSingleItemBatch(com.android.gallery3d.fileops.FileOpBatch.Kind.TRASH, path);
+    }
+
+    /**
+     * Run one file-op batch on the item being viewed. Trash, Restore and
+     * Delete forever all take the item out of the album being browsed, so the
+     * reload moves the viewer on (or closes it on an empty album).
+     */
+    private void startSingleItemBatch(com.android.gallery3d.fileops.FileOpBatch.Kind kind,
+            Path path) {
         ArrayList<Path> one = new ArrayList<Path>(1);
         one.add(path);
         try {
-            mMenuExecutor.startFileOpBatch(
-                    com.android.gallery3d.fileops.FileOpBatch.Kind.TRASH, null, one);
+            mMenuExecutor.startFileOpBatch(kind, null, one);
         } catch (RuntimeException failure) {
             // e.g. the service could not be started: say so rather than do nothing.
-            Log.w(TAG, "Could not start the trash batch for " + path, failure);
-            Toast.makeText(mActivity, R.string.trash_failed, Toast.LENGTH_LONG).show();
+            Log.w(TAG, "Could not start the " + kind + " batch for " + path, failure);
+            Toast.makeText(mActivity,
+                    kind == com.android.gallery3d.fileops.FileOpBatch.Kind.TRASH
+                            ? R.string.trash_failed : R.string.file_op_start_failed,
+                    Toast.LENGTH_LONG).show();
         }
     }
 
