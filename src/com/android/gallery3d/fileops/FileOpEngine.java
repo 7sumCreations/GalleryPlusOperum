@@ -100,7 +100,24 @@ public class FileOpEngine {
      * out of scope for Epic 1.
      */
     public FolderOpResult renameFolder(String fromRelativePath, String newName) {
+        FolderOpResult refused = checkRenameFolder(fromRelativePath, newName);
+        if (refused != null) return refused;
         String from = RelativePaths.normalise(fromRelativePath);
+        return relocateTree(from, RelativePaths.join(RelativePaths.parentOf(from), newName));
+    }
+
+    /**
+     * Everything renameFolder refuses, without writing anything. Lets the UI
+     * turn a bad name away before it asks the user for write consent.
+     *
+     * @return null when the rename would go ahead; otherwise the result
+     *         renameFolder would return (a failure, or an ok no-op).
+     */
+    public FolderOpResult checkRenameFolder(String fromRelativePath, String newName) {
+        String from = RelativePaths.normalise(fromRelativePath);
+        if (from.equalsIgnoreCase(CAMERA_PATH)) {
+            return FolderOpResult.failed(from, "The camera folder cannot be renamed");
+        }
         String nameError = RelativePaths.validateFolderName(newName);
         if (nameError != null) return FolderOpResult.failed(from, nameError);
 
@@ -110,7 +127,7 @@ public class FileOpEngine {
             return FolderOpResult.failed(from,
                     "A folder called " + newName + " already exists here");
         }
-        return relocateTree(from, to);
+        return null;
     }
 
     /**
@@ -118,9 +135,26 @@ public class FileOpEngine {
      * Pictures/Trips/Lisbon, contents and sub-folders included.
      */
     public FolderOpResult moveFolder(String fromRelativePath, String newParentRelativePath) {
+        FolderOpResult refused = checkMoveFolder(fromRelativePath, newParentRelativePath);
+        if (refused != null) return refused;
+        String from = RelativePaths.normalise(fromRelativePath);
+        return relocateTree(from, RelativePaths.join(
+                RelativePaths.normalise(newParentRelativePath), RelativePaths.lastSegment(from)));
+    }
+
+    /**
+     * Everything moveFolder refuses, without writing anything.
+     *
+     * @return null when the move would go ahead; otherwise the result
+     *         moveFolder would return (a failure, or an ok no-op).
+     */
+    public FolderOpResult checkMoveFolder(String fromRelativePath, String newParentRelativePath) {
         String from = RelativePaths.normalise(fromRelativePath);
         String newParent = RelativePaths.normalise(newParentRelativePath);
 
+        if (from.equalsIgnoreCase(CAMERA_PATH)) {
+            return FolderOpResult.failed(from, "The camera folder cannot be moved");
+        }
         if (!RelativePaths.isUnderMediaRoot(newParent)) {
             return FolderOpResult.failed(from,
                     "Folders can only be moved under Pictures or DCIM");
@@ -135,7 +169,7 @@ public class FileOpEngine {
             return FolderOpResult.failed(from, "A folder called "
                     + RelativePaths.lastSegment(from) + " already exists there");
         }
-        return relocateTree(from, to);
+        return null;
     }
 
     /**

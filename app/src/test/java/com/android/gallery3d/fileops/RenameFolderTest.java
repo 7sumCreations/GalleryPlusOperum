@@ -86,4 +86,22 @@ public class RenameFolderTest {
         assertTrue(result.ok);
         assertEquals(0, result.itemsChanged);
     }
+
+    @Test
+    public void theCameraFolderCannotBeRenamed() {
+        Uri a = store.addItem("DCIM/Camera", "a.jpg", 1L);
+
+        FolderOpResult result = engine.renameFolder("dcim/camera", "Holiday");
+
+        assertFalse(result.ok);
+        assertEquals("DCIM/Camera/", store.query(a).relativePath);
+    }
+
+    @Test
+    public void checkRenameWritesNothingAndClearsAValidRename() {
+        Uri a = store.addItem("Pictures/Lisbon", "a.jpg", 1L);
+
+        assertEquals(null, engine.checkRenameFolder("Pictures/Lisbon", "Portugal"));
+        assertEquals("Pictures/Lisbon/", store.query(a).relativePath);
+    }
 }

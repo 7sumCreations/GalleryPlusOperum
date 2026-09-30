@@ -136,6 +136,16 @@
     <string name="deleted_folder">Moved %1$d photos to Trash</string>
     <!-- Shown when the user tries to delete DCIM/Camera. -->
     <string name="cannot_delete_camera_folder">The camera folder cannot be deleted</string>
+    <!-- Shown when the user tries to rename DCIM/Camera. -->
+    <string name="cannot_rename_camera_folder">The camera folder cannot be renamed</string>
+    <!-- Shown when the user tries to move DCIM/Camera. -->
+    <string name="cannot_move_camera_folder">The camera folder cannot be moved</string>
+    <!-- Shown when a long-pressed album is not a folder that can be renamed or moved. -->
+    <string name="folder_not_found">This album is not a folder that can be changed</string>
+    <!-- Generic failure of a folder rename, move or delete. -->
+    <string name="folder_op_failed">Could not change this folder</string>
+    <!-- Shown when the user declines the system write-permission dialog for a folder op. -->
+    <string name="folder_op_permission_denied">Permission was not given, so nothing changed</string>
     <!-- String Delete the selected media item(s) [CHAR LIMIT=50] -->
     <plurals name="delete_selection">
         <item quantity="one">Delete selected item?</item>

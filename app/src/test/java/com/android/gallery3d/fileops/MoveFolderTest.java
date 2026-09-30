@@ -87,4 +87,24 @@ public class MoveFolderTest {
 
         assertFalse(result.ok);
     }
+
+    @Test
+    public void theCameraFolderCannotBeMoved() {
+        Uri a = store.addItem("DCIM/Camera", "a.jpg", 1L);
+        store.addItem("Pictures/Trips", "keep.jpg", 2L);
+
+        FolderOpResult result = engine.moveFolder("DCIM/Camera", "Pictures/Trips");
+
+        assertFalse(result.ok);
+        assertEquals("DCIM/Camera/", store.query(a).relativePath);
+    }
+
+    @Test
+    public void checkMoveWritesNothingAndClearsAValidMove() {
+        Uri a = store.addItem("Pictures/Lisbon", "a.jpg", 1L);
+        store.addItem("Pictures/Trips", "keep.jpg", 2L);
+
+        assertEquals(null, engine.checkMoveFolder("Pictures/Lisbon", "Pictures/Trips"));
+        assertEquals("Pictures/Lisbon/", store.query(a).relativePath);
+    }
 }
