@@ -529,6 +529,8 @@
 
     <!-- Name of the album listing deleted photos awaiting purge. -->
     <string name="trash">Trash</string>
+    <!-- Shown when a photo could not be handed to the file-op service for trashing. -->
+    <string name="trash_failed">Could not move this item to Trash</string>
 
     <!-- Trash action: put the selected photos back where they came from. -->
     <string name="restore">Restore</string>

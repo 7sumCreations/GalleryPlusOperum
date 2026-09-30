@@ -19,8 +19,10 @@ package com.android.gallery3d.app;
 import android.annotation.TargetApi;
 import android.app.ActionBar.OnMenuVisibilityListener;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
@@ -69,6 +71,8 @@ import com.android.gallery3d.ui.SelectionManager;
 import com.android.gallery3d.ui.SynchronizedHandler;
 import com.android.gallery3d.util.GalleryUtils;
 import com.android.gallery3d.util.UsageStatistics;
+
+import java.util.ArrayList;
 
 public abstract class PhotoPage extends ActivityState implements
         PhotoView.Listener, AppBridge.Server, ShareActionProvider.OnShareTargetSelectedListener,
@@ -1082,9 +1086,14 @@ public abstract class PhotoPage extends ActivityState implements
                 item.setTitle(makeFavourite ? R.string.unfavourite : R.string.favourite);
                 return true;
             }
-            case R.id.action_delete:
-                confirmMsg = mActivity.getResources().getQuantityString(
-                        R.plurals.delete_selection, 1);
+            case R.id.action_delete: {
+                // Same as the grid's trash action: a confirmation, then a
+                // FileOpService TRASH batch, which owns consent and Undo. The
+                // legacy MenuExecutor delete ran in-process, could not ask for
+                // consent, and swallowed the failure.
+                confirmSendToTrash(path);
+                return true;
+            }
             case R.id.action_rotate_ccw:
             case R.id.action_rotate_cw:
             case R.id.action_show_on_map:
@@ -1094,6 +1103,46 @@ public abstract class PhotoPage extends ActivityState implements
                 return true;
             default :
                 return false;
+        }
+    }
+
+    private void confirmSendToTrash(final Path path) {
+        mHandler.removeMessages(MSG_HIDE_BARS);
+        new AlertDialog.Builder((Activity) mActivity)
+                .setMessage(mActivity.getResources().getQuantityString(
+                        R.plurals.delete_selection, 1))
+                .setPositiveButton(android.R.string.ok,
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                sendToTrash(path);
+                            }
+                        })
+                .setNegativeButton(android.R.string.cancel, null)
+                .setOnDismissListener(new DialogInterface.OnDismissListener() {
+                    @Override
+                    public void onDismiss(DialogInterface dialog) {
+                        refreshHidingMessage();
+                    }
+                })
+                .show();
+    }
+
+    /**
+     * Send one item to Trash through FileOpService. When it leaves MediaStore
+     * the album reloads and PhotoDataAdapter moves on to the neighbouring item,
+     * or finishes this page if the album is now empty.
+     */
+    private void sendToTrash(Path path) {
+        ArrayList<Path> one = new ArrayList<Path>(1);
+        one.add(path);
+        try {
+            mMenuExecutor.startFileOpBatch(
+                    com.android.gallery3d.fileops.FileOpBatch.Kind.TRASH, null, one);
+        } catch (RuntimeException failure) {
+            // e.g. the service could not be started: say so rather than do nothing.
+            Log.w(TAG, "Could not start the trash batch for " + path, failure);
+            Toast.makeText(mActivity, R.string.trash_failed, Toast.LENGTH_LONG).show();
         }
     }
 
@@ -1210,7 +1259,8 @@ public abstract class PhotoPage extends ActivityState implements
     @Override
     public void onCommitDeleteImage() {
         if (mDeletePath == null) return;
-        mMenuExecutor.startSingleItemAction(R.id.action_delete, mDeletePath);
+        // The swipe-to-delete gesture ends here; route it through Trash too.
+        sendToTrash(mDeletePath);
         mDeletePath = null;
     }
 

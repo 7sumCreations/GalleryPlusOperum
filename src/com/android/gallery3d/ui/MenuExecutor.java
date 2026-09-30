@@ -372,7 +372,15 @@ public class MenuExecutor {
      */
     public String startFileOpBatch(
             com.android.gallery3d.fileops.FileOpBatch.Kind kind, String destRelativePath) {
-        java.util.ArrayList<Path> paths = mSelectionManager.getSelected(true);
+        return startFileOpBatch(kind, destRelativePath, mSelectionManager.getSelected(true));
+    }
+
+    /**
+     * Hand an explicit list of items to FileOpService, for callers such as
+     * PhotoPage that act on one item rather than on the selection.
+     */
+    public String startFileOpBatch(com.android.gallery3d.fileops.FileOpBatch.Kind kind,
+            String destRelativePath, java.util.List<Path> paths) {
         java.util.ArrayList<android.net.Uri> uris =
                 new java.util.ArrayList<android.net.Uri>(paths.size());
         DataManager manager = mActivity.getDataManager();
