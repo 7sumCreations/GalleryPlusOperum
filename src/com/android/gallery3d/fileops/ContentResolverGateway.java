@@ -8,6 +8,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
 import android.provider.MediaStore;
 import android.util.Log;
 
@@ -51,12 +52,18 @@ public class ContentResolverGateway implements MediaStoreGateway {
         mResolver = mContext.getContentResolver();
     }
 
-    /** Content uri that also returns trashed and pending rows. */
-    private static Uri includeHidden(Uri uri) {
-        return uri.buildUpon()
-                .appendQueryParameter(MediaStore.QUERY_ARG_MATCH_TRASHED, "include")
-                .appendQueryParameter(MediaStore.QUERY_ARG_MATCH_PENDING, "include")
-                .build();
+    /**
+     * Query args that also return trashed and pending rows.
+     *
+     * MediaProvider reads QUERY_ARG_MATCH_TRASHED / QUERY_ARG_MATCH_PENDING only
+     * from the query-args Bundle, as ints; as uri query parameters they are
+     * ignored and hidden rows stay hidden.
+     */
+    private static Bundle includeHidden(String selection, String[] args, int matchTrashed) {
+        return MediaQueryArgs.matchPending(
+                MediaQueryArgs.matchTrashed(
+                        MediaQueryArgs.sql(selection, args, null), matchTrashed),
+                MediaStore.MATCH_INCLUDE);
     }
 
     @Override
@@ -64,7 +71,10 @@ public class ContentResolverGateway implements MediaStoreGateway {
         // The interface has no checked exception here, and null already means
         // "gone" to the engine: a provider failure is logged and reported as that.
         try {
-            Cursor cursor = mResolver.query(includeHidden(item), PROJECTION, null, null, null);
+            // An item uri already matches trashed and pending rows in MediaProvider;
+            // the explicit args keep that true for any uri shape.
+            Cursor cursor = mResolver.query(item, PROJECTION,
+                    includeHidden(null, null, MediaStore.MATCH_INCLUDE), null);
             if (cursor == null) return null;
             try {
                 if (!cursor.moveToFirst()) return null;
@@ -261,7 +271,11 @@ public class ContentResolverGateway implements MediaStoreGateway {
 
     @Override
     public List<Uri> trashedOlderThan(long cutoffMillis) {
-        return queryUris(MediaStore.MediaColumns.DATE_EXPIRES + " <= ?",
+        // DATE_EXPIRES is set by MediaProvider to (time trashed + 30 days) when
+        // IS_TRASHED goes to 1, and cleared on restore. Pending rows carry one
+        // too (7 days), so the IS_TRASHED clause keeps them out of the purge.
+        return queryUris(MediaStore.MediaColumns.IS_TRASHED + " = 1 AND "
+                        + MediaStore.MediaColumns.DATE_EXPIRES + " <= ?",
                 new String[]{String.valueOf(cutoffMillis / 1000L)}, true);
     }
 
@@ -442,12 +456,15 @@ public class ContentResolverGateway implements MediaStoreGateway {
         List<Uri> uris = new ArrayList<Uri>();
         try {
             Uri collection = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL);
-            if (trashedOnly) collection = includeHidden(collection);
+            String filtered = withMediaTypes(selection, mediaTypes);
+            Bundle queryArgs = trashedOnly
+                    ? includeHidden(filtered, args, MediaStore.MATCH_ONLY)
+                    : MediaQueryArgs.sql(filtered, args, null);
             Cursor cursor = mResolver.query(collection,
                     new String[]{
                             MediaStore.MediaColumns._ID,
                             MediaStore.Files.FileColumns.MEDIA_TYPE},
-                    withMediaTypes(selection, mediaTypes), args, null);
+                    queryArgs, null);
             if (cursor == null) return uris;
             try {
                 while (cursor.moveToNext()) {

@@ -1,6 +1,5 @@
 package com.android.gallery3d.data;
 
-import android.net.Uri;
 import android.provider.MediaStore;
 
 import com.android.gallery3d.R;
@@ -91,11 +90,15 @@ public class TrashAlbum extends LocalMergeAlbum {
             return new String[0];
         }
 
+        /**
+         * MediaProvider hides trashed rows unless the query-args Bundle says
+         * otherwise. (A uri query parameter is ignored, which is why this
+         * album used to be empty.) The IS_TRASHED = 1 clause is redundant with
+         * MATCH_ONLY but states the intent where the selection is read.
+         */
         @Override
-        protected Uri getQueryUri() {
-            return mBaseUri.buildUpon()
-                    .appendQueryParameter(MediaStore.QUERY_ARG_MATCH_TRASHED, "include")
-                    .build();
+        protected int getMatchTrashed() {
+            return MediaStore.MATCH_ONLY;
         }
 
         @Override

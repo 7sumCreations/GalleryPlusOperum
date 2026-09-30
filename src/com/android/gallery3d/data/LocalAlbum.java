@@ -20,6 +20,7 @@ import android.content.ContentResolver;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.provider.MediaStore.Images;
@@ -29,7 +30,7 @@ import android.provider.MediaStore.Video.VideoColumns;
 
 import com.android.gallery3d.R;
 import com.android.gallery3d.app.GalleryApp;
-import com.android.gallery3d.common.Utils;
+import com.android.gallery3d.fileops.MediaQueryArgs;
 import com.android.gallery3d.util.BucketNames;
 import com.android.gallery3d.util.GalleryUtils;
 import com.android.gallery3d.util.MediaSetUtils;
@@ -105,9 +106,36 @@ public class LocalAlbum extends MediaSet {
         return new String[]{String.valueOf(mBucketId)};
     }
 
-    /** Content uri used for queries. Overridden by albums that need to reach hidden rows. */
-    protected Uri getQueryUri() {
-        return mBaseUri;
+    /**
+     * How this album's queries treat trashed rows, as a MediaStore MATCH_*
+     * value. The default keeps MediaProvider's own default, which excludes
+     * them. Overridden by the Trash, which wants {@link MediaStore#MATCH_ONLY}.
+     *
+     * This must travel in the query-args Bundle: MediaProvider ignores it as a
+     * uri query parameter.
+     */
+    protected int getMatchTrashed() {
+        return MediaStore.MATCH_DEFAULT;
+    }
+
+    /** Query args for this album's rows: selection, args, sort and trash filter. */
+    private Bundle queryArgs(String sortOrder) {
+        return MediaQueryArgs.matchTrashed(
+                MediaQueryArgs.sql(getWhereClause(), getWhereArgs(), sortOrder),
+                getMatchTrashed());
+    }
+
+    /**
+     * Queries MediaStore, turning a provider failure into a null cursor. A
+     * RuntimeException here would escape album loading and blank the grid.
+     */
+    private Cursor queryQuietly(String[] projection, Bundle args) {
+        try {
+            return mResolver.query(mBaseUri, projection, args, null);
+        } catch (RuntimeException failure) {
+            Log.w(TAG, "query failed: " + mBaseUri + " " + failure);
+            return null;
+        }
     }
 
     @Override
@@ -131,16 +159,14 @@ public class LocalAlbum extends MediaSet {
     @Override
     public ArrayList<MediaItem> getMediaItem(int start, int count) {
         DataManager dataManager = mApplication.getDataManager();
-        Uri uri = getQueryUri().buildUpon()
-                .appendQueryParameter("limit", start + "," + count).build();
         ArrayList<MediaItem> list = new ArrayList<MediaItem>();
         GalleryUtils.assertNotInRenderThread();
-        Cursor cursor = mResolver.query(
-                uri, mProjection, getWhereClause(),
-                getWhereArgs(),
-                mOrderClause);
+        // Paging goes in the Bundle: a "limit" uri parameter is ignored for apps
+        // targeting API 30+, which would return the whole album from row 0.
+        Cursor cursor = queryQuietly(mProjection,
+                MediaQueryArgs.page(queryArgs(mOrderClause), start, count));
         if (cursor == null) {
-            Log.w(TAG, "query fail: " + uri);
+            Log.w(TAG, "query fail: " + mBaseUri);
             return list;
         }
 
@@ -237,24 +263,35 @@ public class LocalAlbum extends MediaSet {
         }
     }
 
+    /**
+     * One item by id, trashed or not. A Path to a trashed item (selected in
+     * the Trash) is rebuilt through here once its object has been collected,
+     * and must still resolve, or Restore and Delete forever lose the item.
+     * Returns null when the provider refuses the query.
+     */
     public static Cursor getItemCursor(ContentResolver resolver, Uri uri,
             String[] projection, int id) {
-        return resolver.query(uri, projection, "_id=?",
-                new String[]{String.valueOf(id)}, null);
+        Bundle args = MediaQueryArgs.matchTrashed(
+                MediaQueryArgs.sql("_id=?", new String[]{String.valueOf(id)}, null),
+                MediaStore.MATCH_INCLUDE);
+        try {
+            return resolver.query(uri, projection, args, null);
+        } catch (RuntimeException failure) {
+            Log.w(TAG, "item query failed: " + uri + "/" + id + " " + failure);
+            return null;
+        }
     }
 
     @Override
     public int getMediaItemCount() {
         if (mCachedCount == INVALID_COUNT) {
-            Cursor cursor = mResolver.query(
-                    getQueryUri(), COUNT_PROJECTION, getWhereClause(),
-                    getWhereArgs(), null);
+            Cursor cursor = queryQuietly(COUNT_PROJECTION, queryArgs(null));
             if (cursor == null) {
                 Log.w(TAG, "query fail");
                 return 0;
             }
             try {
-                Utils.assertTrue(cursor.moveToNext());
+                if (!cursor.moveToNext()) return 0;
                 mCachedCount = cursor.getInt(0);
             } finally {
                 cursor.close();
