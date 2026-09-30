@@ -237,8 +237,10 @@ public class MenuExecutor {
     private Intent getIntentBySingleSelectedPath(String action) {
         DataManager manager = mActivity.getDataManager();
         Path path = getSingleSelectedPath();
-        String mimeType = getMimeType(manager.getMediaType(path));
-        return new Intent(action).setDataAndType(manager.getContentUri(path), mimeType);
+        MediaObject object = manager.getMediaObject(path);
+        if (object == null) return null;
+        String mimeType = getMimeType(object.getMediaType());
+        return new Intent(action).setDataAndType(object.getContentUri(), mimeType);
     }
 
     private void onMenuClicked(int action, ProgressListener listener) {
@@ -258,12 +260,14 @@ public class MenuExecutor {
                 return;
             case R.id.action_crop: {
                 Intent intent = getIntentBySingleSelectedPath(CropActivity.CROP_ACTION);
+                if (intent == null) return;
                 ((Activity) mActivity).startActivity(intent);
                 return;
             }
             case R.id.action_edit: {
-                Intent intent = getIntentBySingleSelectedPath(Intent.ACTION_EDIT)
-                        .setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                Intent intent = getIntentBySingleSelectedPath(Intent.ACTION_EDIT);
+                if (intent == null) return;
+                intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 ((Activity) mActivity).startActivity(Intent.createChooser(intent, null));
                 return;
             }
@@ -385,13 +389,31 @@ public class MenuExecutor {
                 new java.util.ArrayList<android.net.Uri>(paths.size());
         DataManager manager = mActivity.getDataManager();
         for (Path path : paths) {
-            uris.add(manager.getContentUri(path));
+            // A row can vanish while it is selected (purged, deleted by another
+            // app): its Path then resolves to nothing. Skip it, don't crash.
+            android.net.Uri uri = contentUriOrNull(manager, path);
+            if (uri != null) uris.add(uri);
+        }
+        if (uris.isEmpty()) {
+            android.widget.Toast.makeText((android.app.Activity) mActivity,
+                    R.string.items_no_longer_exist, android.widget.Toast.LENGTH_SHORT).show();
+            return null;
         }
         String token = com.android.gallery3d.fileops.FileOpBatch.nextToken();
         ((android.app.Activity) mActivity).startForegroundService(
                 com.android.gallery3d.fileops.FileOpService.runIntent(
                         (android.app.Activity) mActivity, kind, uris, destRelativePath, token));
         return token;
+    }
+
+    private static android.net.Uri contentUriOrNull(DataManager manager, Path path) {
+        try {
+            MediaObject object = manager.getMediaObject(path);
+            return object == null ? null : object.getContentUri();
+        } catch (RuntimeException failure) {
+            Log.w(TAG, "Could not resolve " + path, failure);
+            return null;
+        }
     }
 
     public static String getMimeType(int type) {
@@ -422,6 +444,7 @@ public class MenuExecutor {
                 break;
             case R.id.action_toggle_full_caching: {
                 MediaObject obj = manager.getMediaObject(path);
+                if (obj == null) return false;
                 int cacheFlag = obj.getCacheFlag();
                 if (cacheFlag == MediaObject.CACHE_FLAG_FULL) {
                     cacheFlag = MediaObject.CACHE_FLAG_SCREENNAIL;
@@ -432,7 +455,9 @@ public class MenuExecutor {
                 break;
             }
             case R.id.action_show_on_map: {
-                MediaItem item = (MediaItem) manager.getMediaObject(path);
+                MediaObject object = manager.getMediaObject(path);
+                if (!(object instanceof MediaItem)) return false;
+                MediaItem item = (MediaItem) object;
                 double latlng[] = new double[2];
                 item.getLatLong(latlng);
                 if (GalleryUtils.isValidLocation(latlng[0], latlng[1])) {

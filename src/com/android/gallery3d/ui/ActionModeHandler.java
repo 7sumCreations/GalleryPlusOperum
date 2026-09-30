@@ -354,8 +354,11 @@ public class ActionModeHandler implements Callback, PopupList.OnPopupItemClickLi
             if (jc.isCancelled()) {
                 return null;
             }
-            selected.add(manager.getMediaObject(path));
+            MediaObject object = manager.getMediaObject(path);
+            // Skip a row that vanished while selected rather than NPE below.
+            if (object != null) selected.add(object);
         }
+        if (selected.isEmpty()) return null;
 
         return selected;
     }
@@ -398,7 +401,8 @@ public class ActionModeHandler implements Callback, PopupList.OnPopupItemClickLi
         final Intent intent = new Intent();
         for (Path path : expandedPaths) {
             if (jc.isCancelled()) return null;
-            uris.add(manager.getContentUri(path));
+            MediaObject object = manager.getMediaObject(path);
+            if (object != null) uris.add(object.getContentUri());
         }
 
         final int size = uris.size();
@@ -429,11 +433,13 @@ public class ActionModeHandler implements Callback, PopupList.OnPopupItemClickLi
         final Intent intent = new Intent();
         for (Path path : expandedPaths) {
             if (jc.isCancelled()) return null;
-            int support = manager.getSupportedOperations(path);
-            type |= manager.getMediaType(path);
+            MediaObject object = manager.getMediaObject(path);
+            if (object == null) continue;
+            int support = object.getSupportedOperations();
+            type |= object.getMediaType();
 
             if ((support & MediaObject.SUPPORT_SHARE) != 0) {
-                uris.add(manager.getContentUri(path));
+                uris.add(object.getContentUri());
             }
         }
 
