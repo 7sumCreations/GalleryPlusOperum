@@ -129,6 +129,7 @@ Android 12 and newer only. Find it in **⋮ → Settings → Media access → Ma
 - **Nothing leaves your phone** unless you share it yourself.
 - **Few permissions.** It doesn't use the microphone, your contacts or accounts, or your phone's location.
 - **No sensors.** It doesn't read the motion sensors.
+- **No backups of app data.** The app's settings and its Auto-file history are not copied into Android backups or to a new phone, so set it up again there. Your photos and videos are not affected.
 - **Your choice.** "Manage media without asking" is only ever turned on by you.
 
 ## Known limitations

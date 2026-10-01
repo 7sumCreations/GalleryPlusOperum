@@ -9,10 +9,12 @@ The stock AOSP gallery is private because it does very little: no network, no ac
 ## Privacy
 
 - **No internet access.** The app does not request `INTERNET`, so Android will not let it open a network connection — no telemetry, no analytics, no cloud.
-- **Minimal permissions.** Location, microphone, accounts/contacts, NFC, sync, settings-write, vibrate, network-state and exact-alarm permissions have all been removed. What remains has real code behind it: photos & videos, media location metadata, notifications for background file operations, and restart-on-boot for auto-file and trash purge.
+- **Minimal permissions.** Location, camera, microphone, accounts/contacts, NFC, sync, settings-write, vibrate, network-state and exact-alarm permissions have all been removed. What remains has real code behind it: photos & videos, media location metadata, notifications for background file operations, and restart-on-boot for auto-file and trash purge.
 - **No sensor use.** The legacy orientation listener that silently read the accelerometer is gone.
 - **Sharing is per item.** Share uses Android's system share sheet with a one-time read grant for exactly the items you choose. The app does not enumerate your installed apps.
 - **No file-provider exposure** of external storage.
+- **Small surface for other apps.** Other apps can only open the gallery, pick a photo or video, view a local image or video, edit an image, or choose it for a wallpaper. Crop, trim, MTP import, the old widget and the Picasa provider are not reachable from outside, nothing accepts web links or `file:` paths, and a test pins the list.
+- **No backup of app data.** `allowBackup` is off and the data-extraction rules exclude everything from cloud backup and device-to-device transfer.
 - **Opt-in only.** "Manage media without asking" (`MANAGE_MEDIA`) is available in Settings for people who want fewer permission prompts; the app never asks for it on its own.
 
 ## Features
