@@ -191,4 +191,70 @@ public class AutoFileSettingsTest {
         assertFalse(store.values.containsKey(AutoFileSettings.KEY_ENABLED));
         assertFalse(store.values.containsKey(AutoFileSettings.KEY_WATCHED_FOLDER));
     }
+
+    // --- "Enabled since": only photos taken after switching on are filed ---
+
+    private static final long T0 = 1790157600000L;   // 2026-09-22T10:00:00Z
+
+    @Test
+    public void switchingOnStampsEnabledSinceInEpochSeconds() {
+        settings.setEnabled(true, T0);
+
+        assertEquals(T0 / 1000L, settings.enabledSinceSeconds());
+        assertEquals(String.valueOf(T0 / 1000L),
+                store.values.get(AutoFileSettings.KEY_ENABLED_SINCE));
+    }
+
+    @Test
+    public void offThenOnAgainResetsTheStampToTheNewTime() {
+        settings.setEnabled(true, T0);
+        settings.setEnabled(false, T0 + 1000L);
+        assertEquals(AutoFileSettings.NO_TIMESTAMP, settings.enabledSinceSeconds());
+
+        settings.setEnabled(true, T0 + 3_600_000L);
+
+        assertEquals((T0 + 3_600_000L) / 1000L, settings.enabledSinceSeconds());
+    }
+
+    @Test
+    public void turningOnARuleThatIsAlreadyOnKeepsTheOriginalStamp() {
+        settings.setEnabled(true, T0);
+        settings.setEnabled(true, T0 + 3_600_000L);
+
+        assertEquals(T0 / 1000L, settings.enabledSinceSeconds());
+    }
+
+    @Test
+    public void aMissingStampOnAnEnabledRuleIsInitialisedToNowAndPersisted() {
+        store.values.put(AutoFileSettings.KEY_ENABLED, true);
+        assertEquals(AutoFileSettings.NO_TIMESTAMP, settings.enabledSinceSeconds());
+
+        assertEquals(T0 / 1000L, settings.ensureEnabledSinceSeconds(T0));
+        // Later reads keep the first stamp.
+        assertEquals(T0 / 1000L, settings.ensureEnabledSinceSeconds(T0 + 3_600_000L));
+        assertEquals(String.valueOf(T0 / 1000L),
+                store.values.get(AutoFileSettings.KEY_ENABLED_SINCE));
+    }
+
+    @Test
+    public void anUnusableStampIsNeverReadAsZero() {
+        store.values.put(AutoFileSettings.KEY_ENABLED_SINCE, 1790157600L);   // wrong type
+        assertEquals(AutoFileSettings.NO_TIMESTAMP, settings.enabledSinceSeconds());
+        store.values.put(AutoFileSettings.KEY_ENABLED_SINCE, "0");
+        assertEquals(AutoFileSettings.NO_TIMESTAMP, settings.enabledSinceSeconds());
+        store.values.put(AutoFileSettings.KEY_ENABLED_SINCE, "-5");
+        assertEquals(AutoFileSettings.NO_TIMESTAMP, settings.enabledSinceSeconds());
+        store.values.put(AutoFileSettings.KEY_ENABLED_SINCE, "soon");
+        assertEquals(AutoFileSettings.NO_TIMESTAMP, settings.enabledSinceSeconds());
+
+        assertEquals(T0 / 1000L, settings.ensureEnabledSinceSeconds(T0));
+    }
+
+    @Test
+    public void aStampInTheFutureIsPulledBackToNow() {
+        settings.setEnabled(true, T0 + 3_600_000L);
+
+        assertEquals(T0 / 1000L, settings.ensureEnabledSinceSeconds(T0));
+        assertEquals(T0 / 1000L, settings.enabledSinceSeconds());
+    }
 }

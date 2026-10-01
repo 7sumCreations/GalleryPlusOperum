@@ -10,6 +10,16 @@ public final class AutoFileSettings {
     public static final String KEY_ENABLED = "auto_file_enabled";
     public static final String KEY_WATCHED_FOLDER = "auto_file_watched_folder";
     public static final String KEY_DELAY_MINUTES = "auto_file_delay_minutes";
+    /**
+     * When the rule was last switched on, in epoch SECONDS (the unit of
+     * MediaStore DATE_ADDED, which is what itemsAddedSince compares against).
+     * Stored as a decimal String so it needs no new Store method and a bad
+     * value can be parsed tolerantly. Not bound to any Settings widget.
+     */
+    public static final String KEY_ENABLED_SINCE = "auto_file_enabled_since_seconds";
+
+    /** Returned by enabledSinceSeconds() when no usable timestamp is stored. */
+    public static final long NO_TIMESTAMP = -1L;
 
     /** Opt-in: nothing moves automatically until the user says so. */
     public static final boolean DEFAULT_ENABLED = false;
@@ -99,7 +109,66 @@ public final class AutoFileSettings {
     }
 
     public void setEnabled(boolean enabled) {
+        setEnabled(enabled, System.currentTimeMillis());
+    }
+
+    /**
+     * Switching the rule on (from off) stamps "enabled since" with now, so only
+     * photos added from this moment on are ever auto-filed; the existing camera
+     * roll is never touched. Switching off clears the stamp, so off-then-on
+     * always starts a fresh window. Turning on a rule that is already on keeps
+     * the original stamp, unless it is missing or unusable.
+     */
+    public void setEnabled(boolean enabled, long nowMillis) {
+        if (enabled) {
+            if (!isEnabled() || enabledSinceSeconds() == NO_TIMESTAMP) {
+                writeEnabledSince(nowMillis);
+            }
+        } else {
+            mStore.putString(KEY_ENABLED_SINCE, "");
+        }
         mStore.putBoolean(KEY_ENABLED, enabled);
+    }
+
+    /**
+     * The stored "enabled since" time in epoch seconds, or NO_TIMESTAMP when it
+     * is absent, of the wrong type, non-numeric, or not positive. Never throws,
+     * never returns 0: a 0 here would mean "every photo ever".
+     */
+    public long enabledSinceSeconds() {
+        String raw;
+        try {
+            raw = mStore.getString(KEY_ENABLED_SINCE, null);
+        } catch (ClassCastException wrongType) {
+            return NO_TIMESTAMP;
+        }
+        return parseEnabledSince(raw);
+    }
+
+    /**
+     * The "enabled since" time to filter by, repairing it first when needed:
+     * a missing or unusable stamp, or one in the future (the clock went back),
+     * is replaced with now and persisted. This is the migration path for
+     * phones that had the rule switched on before the stamp existed: they start
+     * counting from the first time this runs, so nothing already in the folder
+     * moves. Only meaningful while the rule is on. Never throws.
+     */
+    public long ensureEnabledSinceSeconds(long nowMillis) {
+        long nowSeconds = nowMillis / 1000L;
+        long since = enabledSinceSeconds();
+        if (since == NO_TIMESTAMP || since > nowSeconds) {
+            try {
+                writeEnabledSince(nowMillis);
+            } catch (RuntimeException couldNotPersist) {
+                // Still filter by now for this run: never fall back to 0.
+            }
+            return nowSeconds;
+        }
+        return since;
+    }
+
+    private void writeEnabledSince(long nowMillis) {
+        mStore.putString(KEY_ENABLED_SINCE, String.valueOf(nowMillis / 1000L));
     }
 
     public String watchedFolder() {
@@ -184,6 +253,17 @@ public final class AutoFileSettings {
         String normalised = RelativePaths.normalise(raw);
         return normalised.isEmpty()
                 ? RelativePaths.normalise(DEFAULT_WATCHED_FOLDER) : normalised;
+    }
+
+    static long parseEnabledSince(String raw) {
+        if (raw == null) return NO_TIMESTAMP;
+        long value;
+        try {
+            value = Long.parseLong(raw.trim());
+        } catch (NumberFormatException notANumber) {
+            return NO_TIMESTAMP;
+        }
+        return value > 0 ? value : NO_TIMESTAMP;
     }
 
     static boolean parseEnabled(String raw) {

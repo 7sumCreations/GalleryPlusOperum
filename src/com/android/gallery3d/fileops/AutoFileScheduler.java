@@ -39,10 +39,17 @@ public final class AutoFileScheduler {
         List<Plan> plans = new ArrayList<Plan>();
         if (!mSettings.isEnabled()) return plans;
 
+        // Only photos added since the rule was switched on are candidates: the
+        // camera roll that was already there is never touched. A missing stamp
+        // is initialised to now (and persisted), so on that run nothing is due.
+        long nowSeconds = nowMillis / 1000L;
+        long enabledSince = mSettings.ensureEnabledSinceSeconds(nowMillis);
+        if (enabledSince >= nowSeconds) return plans;
+
         String watched = mSettings.watchedFolder();
         long cutoffSeconds = (nowMillis - mSettings.delayMillis()) / 1000L;
 
-        for (Uri item : mGateway.itemsAddedSince(watched, 0L)) {
+        for (Uri item : mGateway.itemsAddedSince(watched, enabledSince)) {
             MediaItemInfo info = mGateway.query(item);
             if (info == null) continue;
             // Only items in the watched folder itself, not its sub-folders.

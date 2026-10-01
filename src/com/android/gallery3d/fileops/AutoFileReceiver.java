@@ -54,6 +54,9 @@ public class AutoFileReceiver extends BroadcastReceiver {
                 cancel(context);
                 return;
             }
+            // Migration: a rule switched on by a build that predates the
+            // "enabled since" stamp starts counting from now.
+            settings.ensureEnabledSinceSeconds(System.currentTimeMillis());
             long interval = checkIntervalMillis(settings);
             AlarmManager alarms =
                     (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);

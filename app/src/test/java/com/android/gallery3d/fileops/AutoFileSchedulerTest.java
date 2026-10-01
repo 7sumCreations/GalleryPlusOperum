@@ -60,14 +60,18 @@ public class AutoFileSchedulerTest {
     }
 
     private FakeMediaStore store;
+    private MapStore prefs;
     private AutoFileSettings settings;
     private AutoFileScheduler scheduler;
 
     @Before
     public void setUp() {
         store = new FakeMediaStore();
-        settings = new AutoFileSettings(new MapStore());
-        settings.setEnabled(true);
+        prefs = new MapStore();
+        settings = new AutoFileSettings(prefs);
+        // Switched on an hour before the fixtures below are added, so they all
+        // count as "taken after Auto-file was switched on".
+        settings.setEnabled(true, SEPT_2026 - 60 * MINUTE);
         scheduler = new AutoFileScheduler(store, settings, TimeZone.getTimeZone("UTC"));
     }
 
@@ -167,5 +171,66 @@ public class AutoFileSchedulerTest {
         List<AutoFileScheduler.Plan> plans = scheduler.planFor(SEPT_2026 + 60 * MINUTE);
 
         assertTrue(plans.isEmpty());
+    }
+
+    // --- Only photos added after Auto-file was switched on are ever filed ---
+
+    @Test
+    public void photosAddedBeforeTheRuleWasSwitchedOnAreNeverPlanned() {
+        settings.setEnabled(false);
+        Uri old = addCameraPhoto("old.jpg", SEPT_2026, SEPT_2026);
+        settings.setEnabled(true, SEPT_2026 + 10 * MINUTE);
+
+        List<AutoFileScheduler.Plan> plans = scheduler.planFor(SEPT_2026 + 24 * 60 * MINUTE);
+
+        assertTrue("the existing camera roll must never move", plans.isEmpty());
+        assertEquals("DCIM/Camera/", store.query(old).relativePath);
+    }
+
+    @Test
+    public void onlyPhotosAddedAfterSwitchingOnAndOlderThanTheDelayArePlanned() {
+        settings.setEnabled(false);
+        addCameraPhoto("before.jpg", SEPT_2026, SEPT_2026);
+        settings.setEnabled(true, SEPT_2026 + MINUTE);
+        Uri after = addCameraPhoto("after.jpg", SEPT_2026 + 2 * MINUTE, SEPT_2026 + 2 * MINUTE);
+        addCameraPhoto("tooNew.jpg", SEPT_2026 + 9 * MINUTE, SEPT_2026 + 9 * MINUTE);
+
+        // after.jpg has waited 8 minutes, tooNew.jpg only 1.
+        List<AutoFileScheduler.Plan> plans = scheduler.planFor(SEPT_2026 + 10 * MINUTE);
+
+        assertEquals(1, plans.size());
+        assertEquals(after, plans.get(0).item);
+        assertEquals("Pictures/2026/09/", plans.get(0).destRelativePath);
+    }
+
+    @Test
+    public void aRuleOnWithNoTimestampStartsCountingFromNowAndMovesNothingExisting() {
+        // The owner's phone: switched on by an older build, no stamp stored.
+        prefs.values.clear();
+        prefs.values.put(AutoFileSettings.KEY_ENABLED, true);
+        addCameraPhoto("a.jpg", SEPT_2026, SEPT_2026);
+        addCameraPhoto("b.jpg", SEPT_2026, SEPT_2026 + 30 * MINUTE);
+        long firstRun = SEPT_2026 + 60 * MINUTE;
+
+        assertTrue(scheduler.planFor(firstRun).isEmpty());
+        assertEquals(String.valueOf(firstRun / 1000L),
+                prefs.values.get(AutoFileSettings.KEY_ENABLED_SINCE));
+
+        // A day later the old photos are still not candidates; a new one is.
+        Uri fresh = addCameraPhoto("new.jpg", firstRun + MINUTE, firstRun + MINUTE);
+        List<AutoFileScheduler.Plan> later = scheduler.planFor(firstRun + 24 * 60 * MINUTE);
+        assertEquals(1, later.size());
+        assertEquals(fresh, later.get(0).item);
+    }
+
+    @Test
+    public void aGarbageTimestampIsTreatedAsMissingNeverAsZero() {
+        prefs.values.put(AutoFileSettings.KEY_ENABLED_SINCE, "not a number");
+        addCameraPhoto("a.jpg", SEPT_2026, SEPT_2026);
+
+        assertTrue(scheduler.planFor(SEPT_2026 + 60 * MINUTE).isEmpty());
+
+        prefs.values.put(AutoFileSettings.KEY_ENABLED_SINCE, 0L);
+        assertTrue(scheduler.planFor(SEPT_2026 + 120 * MINUTE).isEmpty());
     }
 }

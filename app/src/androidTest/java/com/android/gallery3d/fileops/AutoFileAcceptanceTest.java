@@ -153,4 +153,19 @@ public class AutoFileAcceptanceTest {
         assertEquals("autofile_undo.jpg", info.displayName);
         assertEquals(SEPT_2026, info.dateTakenMillis);
     }
+
+    @Test
+    public void aPhotoThatWasAlreadyThereWhenTheRuleWasSwitchedOnIsLeftAlone()
+            throws Exception {
+        settings.setEnabled(false);
+        Uri existing = insertFixture("autofile_existing.jpg", SEPT_2026);
+        // DATE_ADDED has one-second resolution: make sure "switched on" is
+        // strictly later than the fixture.
+        Thread.sleep(1500L);
+        settings.setEnabled(true);
+
+        AutoFileReceiver.applyRule(context, System.currentTimeMillis() + HOUR);
+
+        assertEquals(WATCHED, gateway.query(existing).relativePath);
+    }
 }
