@@ -1241,4 +1241,17 @@ CHAR LIMIT = NONE] -->
     <string name="help_open_summary">How to use the gallery, in plain words</string>
     <!-- Shown on the Help screen when the help text could not be loaded. -->
     <string name="help_unavailable">The help text could not be loaded. You can also read it on the project\'s GitHub page, in the file HELP.md.</string>
+
+    <!-- First-run photo access. Title of the dialog shown when Photos and videos access is missing. -->
+    <string name="media_access_needed_title">Photos and videos access needed</string>
+    <!-- Body when the app may still ask again with the system dialog. -->
+    <string name="media_access_needed_message">The gallery needs access to your photos and videos to show anything. Nothing leaves your phone.</string>
+    <!-- Body when the system will not ask again; access has to be turned on in Settings. -->
+    <string name="media_access_needed_message_settings">The gallery needs access to your photos and videos to show anything. Nothing leaves your phone. To allow it, open Settings, tap Permissions, then Photos and videos.</string>
+    <!-- Button: show the system permission dialog again. -->
+    <string name="media_access_allow">Allow access</string>
+    <!-- Button: open this app's page in system settings. -->
+    <string name="media_access_open_settings">Open settings</string>
+    <!-- Button: close the explanation and leave the gallery empty for now. -->
+    <string name="media_access_not_now">Not now</string>
 </resources>

@@ -53,6 +53,8 @@ public final class GalleryActivity extends AbstractGalleryActivity implements On
 
     private static final String TAG = "GalleryActivity";
     private Dialog mVersionCheckDialog;
+    /** Asks for photo access when this launch browses the library; null otherwise. */
+    private MediaAccessGate mMediaAccessGate;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,6 +68,7 @@ public final class GalleryActivity extends AbstractGalleryActivity implements On
         }
 
         setContentView(R.layout.main);
+        createMediaAccessGate(savedInstanceState);
 
         if (savedInstanceState != null) {
             getStateManager().restoreFromState(savedInstanceState);
@@ -235,6 +238,7 @@ public final class GalleryActivity extends AbstractGalleryActivity implements On
         if (mVersionCheckDialog != null) {
             mVersionCheckDialog.show();
         }
+        if (mMediaAccessGate != null) mMediaAccessGate.onResume();
     }
 
     @Override
@@ -243,7 +247,49 @@ public final class GalleryActivity extends AbstractGalleryActivity implements On
         if (mVersionCheckDialog != null) {
             mVersionCheckDialog.dismiss();
         }
+        if (mMediaAccessGate != null) mMediaAccessGate.onPause();
     }
+
+    // ---- Photo access (first run, revoked in Settings) ------------------
+    // Only the library-browsing launch asks. Pick, get-content and view
+    // intents from other apps are left alone (see MediaAccessPolicy).
+
+    private void createMediaAccessGate(Bundle savedInstanceState) {
+        if (!MediaAccessPolicy.browsesLibrary(getIntent().getAction())) return;
+        mMediaAccessGate = new MediaAccessGate(this, new Runnable() {
+            @Override
+            public void run() {
+                reloadAfterAccessGranted();
+            }
+        });
+        mMediaAccessGate.onCreate(savedInstanceState);
+    }
+
+    /** The albums were loaded without access; load them again now. */
+    private void reloadAfterAccessGranted() {
+        try {
+            getDataManager().notifyAllContentChanged();
+        } catch (RuntimeException e) {
+            Log.w(TAG, "reload after access granted failed", e);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (mMediaAccessGate != null) {
+            mMediaAccessGate.onRequestPermissionsResult(requestCode,
+                    permissions == null ? 0 : permissions.length);
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (mMediaAccessGate != null) mMediaAccessGate.onSaveInstanceState(outState);
+    }
+    // ---------------------------------------------------------------------
 
     @Override
     public void onCancel(DialogInterface dialog) {

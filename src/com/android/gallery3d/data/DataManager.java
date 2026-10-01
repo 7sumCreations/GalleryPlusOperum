@@ -316,6 +316,22 @@ public class DataManager implements StitchingChangeListener {
         broker.registerNotifier(notifier);
     }
 
+    /**
+     * Marks every watched media set dirty, as if MediaStore had reported a
+     * change. Used after photo access is granted: the provider sends no change
+     * notification for a permission grant, so the sets loaded while access was
+     * missing would otherwise stay empty until the next real change.
+     */
+    public void notifyAllContentChanged() {
+        ArrayList<NotifyBroker> brokers;
+        synchronized (mNotifierMap) {
+            brokers = new ArrayList<NotifyBroker>(mNotifierMap.values());
+        }
+        for (NotifyBroker broker : brokers) {
+            broker.onChange(false);
+        }
+    }
+
     public void resume() {
         if (++mActiveCount == 1) {
             for (MediaSource source : mSourceMap.values()) {
