@@ -3,7 +3,9 @@ package com.android.gallery3d.fileops;
 import android.net.Uri;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.TimeZone;
 
 /**
@@ -27,12 +29,23 @@ public final class AutoFileScheduler {
     private final MediaStoreGateway mGateway;
     private final AutoFileSettings mSettings;
     private final TimeZone mZone;
+    private final Set<String> mNeverAgain;
 
     public AutoFileScheduler(MediaStoreGateway gateway, AutoFileSettings settings,
             TimeZone zone) {
+        this(gateway, settings, zone, Collections.<String>emptySet());
+    }
+
+    /**
+     * @param neverAgain uris of photos the user put back with Undo; they are
+     *        never planned again (AutoFileLog.undoneUris()).
+     */
+    public AutoFileScheduler(MediaStoreGateway gateway, AutoFileSettings settings,
+            TimeZone zone, Set<String> neverAgain) {
         mGateway = gateway;
         mSettings = settings;
         mZone = zone;
+        mNeverAgain = neverAgain == null ? Collections.<String>emptySet() : neverAgain;
     }
 
     public List<Plan> planFor(long nowMillis) {
@@ -50,6 +63,8 @@ public final class AutoFileScheduler {
         long cutoffSeconds = (nowMillis - mSettings.delayMillis()) / 1000L;
 
         for (Uri item : mGateway.itemsAddedSince(watched, enabledSince)) {
+            // The user undid this one: their decision stands.
+            if (mNeverAgain.contains(item.toString())) continue;
             MediaItemInfo info = mGateway.query(item);
             if (info == null) continue;
             // Only items in the watched folder itself, not its sub-folders.

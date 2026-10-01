@@ -1223,6 +1223,48 @@ CHAR LIMIT = NONE] -->
     <!-- How long to wait before moving. -->
     <string name="auto_file_delay_title">Wait before moving</string>
     <string name="auto_file_delay_summary">Minutes to leave a new photo alone before filing it, so other apps can finish with it. Default: 5</string>
+    <!-- F-025 Auto-file notifications and the permission note. -->
+    <!-- Notification title after Auto-file moved photos into one folder; %2$s is e.g. Pictures/2026/10. -->
+    <plurals name="auto_file_filed_into_folder">
+        <item quantity="one">Filed %1$d new photo into %2$s</item>
+        <item quantity="other">Filed %1$d new photos into %2$s</item>
+    </plurals>
+    <!-- Notification title after Auto-file moved photos into several dated folders; %2$d is how many folders. -->
+    <plurals name="auto_file_filed_into_folders">
+        <item quantity="one">Filed %1$d new photo into %2$d folders in Pictures</item>
+        <item quantity="other">Filed %1$d new photos into %2$d folders in Pictures</item>
+    </plurals>
+    <!-- Notification text under the "Filed" title. -->
+    <string name="auto_file_filed_text">Tap Undo to put them back where they were.</string>
+    <!-- Action button on the "Filed" notification. -->
+    <string name="auto_file_undo_action">Undo</string>
+    <!-- After Undo: how many photos went back. -->
+    <plurals name="auto_file_undo_done">
+        <item quantity="one">Put %1$d photo back</item>
+        <item quantity="other">Put %1$d photos back</item>
+    </plurals>
+    <!-- After Undo when nothing could be put back. -->
+    <string name="auto_file_undo_nothing">Nothing was put back</string>
+    <!-- After Undo: photos left alone. -->
+    <plurals name="auto_file_undo_not_restored">
+        <item quantity="one">%1$d photo was left where it is: it was moved or deleted since, or Android needs your permission.</item>
+        <item quantity="other">%1$d photos were left where they are: they were moved or deleted since, or Android needs your permission.</item>
+    </plurals>
+    <!-- Title of the notification when Auto-file skipped photos for want of permission. -->
+    <string name="auto_file_skipped_title">Auto-file needs your permission</string>
+    <!-- Body of that notification (Android 12+). Tapping opens Settings. -->
+    <plurals name="auto_file_skipped_text">
+        <item quantity="one">Auto-file couldn\'t move %1$d photo because Android needs your permission. Turn on \'Manage media without asking\' in Settings so Auto-file can work in the background.</item>
+        <item quantity="other">Auto-file couldn\'t move %1$d photos because Android needs your permission. Turn on \'Manage media without asking\' in Settings so Auto-file can work in the background.</item>
+    </plurals>
+    <!-- Body of that notification on Android 10 and 11, which have no such setting. -->
+    <plurals name="auto_file_skipped_text_legacy">
+        <item quantity="one">Auto-file couldn\'t move %1$d photo because another app made it and Android needs your permission for each one. You can still move it by hand.</item>
+        <item quantity="other">Auto-file couldn\'t move %1$d photos because another app made them and Android needs your permission for each one. You can still move them by hand.</item>
+    </plurals>
+    <!-- Settings note under the Auto-file switch while Manage media is not allowed. -->
+    <string name="auto_file_permission_note_title">Camera photos need permission</string>
+    <string name="auto_file_permission_note_summary">Photos taken by the Camera app can only be filed automatically when \'Manage media without asking\' is allowed. Until then Auto-file skips them and tells you. Tap to open that setting.</string>
 
     <!-- Settings category for the standing media-management grant (Android 12+). -->
     <string name="media_access_category_title">Media access</string>

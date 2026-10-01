@@ -25,6 +25,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
+import android.preference.PreferenceGroup;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Log;
@@ -46,6 +47,13 @@ public class GallerySettings extends PreferenceActivity
     static final String KEY_MEDIA_ACCESS_MANAGE = "media_access_manage";
     /** Non-persistent entry that opens the in-app Help screen. */
     static final String KEY_HELP_OPEN = "help_open";
+    /** Category holding the Auto-file switch and its settings. */
+    static final String KEY_AUTO_FILE_CATEGORY = "auto_file_category";
+    /** Note under the Auto-file switch while camera photos cannot be filed. */
+    static final String KEY_AUTO_FILE_PERMISSION_NOTE = "auto_file_permission_note";
+
+    /** Held while removed from the screen, so it can be put back in its place. */
+    private Preference mPermissionNote;
 
     @Override
     @SuppressWarnings("deprecation")
@@ -63,7 +71,61 @@ public class GallerySettings extends PreferenceActivity
         findPreference(AutoFileSettings.KEY_ENABLED).setOnPreferenceChangeListener(this);
         findPreference(AutoFileSettings.KEY_DELAY_MINUTES).setOnPreferenceChangeListener(this);
         setUpMediaAccess();
+        setUpPermissionNote();
         setUpHelp();
+    }
+
+    /**
+     * Camera photos belong to the Camera app, so moving one in the background
+     * needs "Manage media without asking". Say so under the switch, honestly,
+     * whenever Auto-file is on without it. Never requests the grant itself.
+     */
+    static boolean shouldShowPermissionNote(int sdkInt, boolean autoFileOn,
+            boolean canManageMedia) {
+        return isMediaAccessSupported(sdkInt) && autoFileOn && !canManageMedia;
+    }
+
+    @SuppressWarnings("deprecation")
+    private void setUpPermissionNote() {
+        mPermissionNote = findPreference(KEY_AUTO_FILE_PERMISSION_NOTE);
+        if (mPermissionNote == null) return;
+        mPermissionNote.setOnPreferenceClickListener(
+                new Preference.OnPreferenceClickListener() {
+                    @Override
+                    public boolean onPreferenceClick(Preference preference) {
+                        openManageMediaSettings();
+                        return true;
+                    }
+                });
+        refreshPermissionNote(isAutoFileOn());
+    }
+
+    private boolean isAutoFileOn() {
+        try {
+            return AutoFileSettings.from(this).isEnabled();
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    private void refreshPermissionNote(boolean autoFileOn) {
+        if (mPermissionNote == null) return;
+        try {
+            boolean allowed = isMediaAccessSupported(Build.VERSION.SDK_INT)
+                    && canManageMedia(this);
+            boolean show = shouldShowPermissionNote(Build.VERSION.SDK_INT, autoFileOn, allowed);
+            Preference category = findPreference(KEY_AUTO_FILE_CATEGORY);
+            if (!(category instanceof PreferenceGroup)) return;
+            PreferenceGroup group = (PreferenceGroup) category;
+            boolean shown = group.findPreference(KEY_AUTO_FILE_PERMISSION_NOTE) != null;
+            // The note keeps the order it was inflated with, so re-adding it
+            // puts it straight back under the switch.
+            if (show && !shown) group.addPreference(mPermissionNote);
+            if (!show && shown) group.removePreference(mPermissionNote);
+        } catch (RuntimeException e) {
+            Log.w(TAG, "could not refresh the auto-file permission note", e);
+        }
     }
 
     @SuppressWarnings("deprecation")
@@ -91,10 +153,11 @@ public class GallerySettings extends PreferenceActivity
         super.onResume();
         // The user may have just changed the grant in system settings.
         refreshMediaAccessSummary();
+        refreshPermissionNote(isAutoFileOn());
     }
 
     /** MediaStore.canManageMedia and ACTION_REQUEST_MANAGE_MEDIA arrived in API 31. */
-    static boolean isMediaAccessSupported(int sdkInt) {
+    public static boolean isMediaAccessSupported(int sdkInt) {
         return sdkInt >= Build.VERSION_CODES.S;
     }
 
@@ -183,6 +246,7 @@ public class GallerySettings extends PreferenceActivity
                     AutoFileSettings.from(this).setEnabled(false);
                     AutoFileReceiver.cancel(this);
                 }
+                refreshPermissionNote(Boolean.TRUE.equals(newValue));
                 return true;
             }
             if (AutoFileSettings.KEY_DELAY_MINUTES.equals(preference.getKey())) {

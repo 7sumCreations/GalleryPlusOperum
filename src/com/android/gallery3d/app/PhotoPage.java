@@ -1143,6 +1143,17 @@ public abstract class PhotoPage extends ActivityState implements
                 confirmDeleteForever(path);
                 return true;
             }
+            case R.id.action_move: {
+                // Same picker and FileOpService batch as the grid's Move; the
+                // item leaves this folder, so the viewer then leaves too.
+                pickFolderThenRun(com.android.gallery3d.fileops.FileOpBatch.Kind.MOVE, path);
+                return true;
+            }
+            case R.id.action_copy: {
+                // The original stays put, so the viewer stays on it.
+                pickFolderThenRun(com.android.gallery3d.fileops.FileOpBatch.Kind.COPY, path);
+                return true;
+            }
             case R.id.action_rotate_ccw:
             case R.id.action_rotate_cw:
             case R.id.action_show_on_map:
@@ -1200,6 +1211,52 @@ public abstract class PhotoPage extends ActivityState implements
                 .show();
     }
 
+    /**
+     * Move to… / Copy to…: the grid's folder picker (with "+ New folder"), then
+     * a FileOpService batch for the item on show. Cancel does nothing.
+     */
+    private void pickFolderThenRun(final com.android.gallery3d.fileops.FileOpBatch.Kind kind,
+            final Path path) {
+        mHandler.removeMessages(MSG_HIDE_BARS);
+        try {
+            com.android.gallery3d.fileops.FolderPicker.showWithNewFolder(
+                    (Activity) mActivity,
+                    new com.android.gallery3d.fileops.ContentResolverGateway(
+                            mActivity.getAndroidContext()),
+                    R.string.choose_folder,
+                    new com.android.gallery3d.fileops.FolderPicker.Listener() {
+                        @Override
+                        public void onFolderChosen(String relativePath) {
+                            startSingleItemBatch(kind, relativePath, path);
+                            refreshHidingMessage();
+                        }
+                    });
+        } catch (RuntimeException failure) {
+            Log.w(TAG, "Could not show the folder picker for " + kind, failure);
+            Toast.makeText(mActivity, R.string.file_op_start_failed, Toast.LENGTH_LONG).show();
+            refreshHidingMessage();
+        }
+    }
+
+    /**
+     * Whether handing this kind of batch over takes the item out of the album
+     * on show, so the viewer should leave (as for Delete) rather than stay.
+     */
+    static boolean leavesViewerAfter(com.android.gallery3d.fileops.FileOpBatch.Kind kind) {
+        switch (kind) {
+            case TRASH:
+            case RESTORE:
+            case DELETE_FOREVER:
+            case MOVE:
+                return true;
+            case COPY:
+            case FAVOURITE:
+            case UNFAVOURITE:
+            default:
+                return false;
+        }
+    }
+
     /** Send one item to Trash through FileOpService, then return to the grid. */
     private void sendToTrash(Path path) {
         startSingleItemBatch(com.android.gallery3d.fileops.FileOpBatch.Kind.TRASH, path);
@@ -1214,11 +1271,21 @@ public abstract class PhotoPage extends ActivityState implements
      */
     private void startSingleItemBatch(com.android.gallery3d.fileops.FileOpBatch.Kind kind,
             Path path) {
+        startSingleItemBatch(kind, null, path);
+    }
+
+    /**
+     * As above with a destination folder (Move, Copy). Only kinds that take
+     * the item out of this album (see leavesViewerAfter) leave the viewer.
+     */
+    private void startSingleItemBatch(com.android.gallery3d.fileops.FileOpBatch.Kind kind,
+            String destRelativePath, Path path) {
         ArrayList<Path> one = new ArrayList<Path>(1);
         one.add(path);
         try {
             // null: the item had already gone, and the user has been told.
-            if (mMenuExecutor.startFileOpBatch(kind, null, one) != null) {
+            if (mMenuExecutor.startFileOpBatch(kind, destRelativePath, one) != null
+                    && leavesViewerAfter(kind)) {
                 leaveAfterItemRemoved();
             }
         } catch (RuntimeException failure) {

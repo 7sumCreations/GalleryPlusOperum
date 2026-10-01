@@ -5,12 +5,12 @@ import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.net.Uri;
-import android.os.AsyncTask;
 import android.util.Log;
 
 import java.util.List;
 import java.util.TimeZone;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 /**
  * Wakes up periodically, asks AutoFileScheduler what is due, and hands the work
@@ -25,6 +25,48 @@ public class AutoFileReceiver extends BroadcastReceiver {
     private static final String TAG = "AutoFileReceiver";
 
     public static final String ACTION_AUTO_FILE = "com.android.gallery3d.fileops.AUTO_FILE";
+    /** The Undo button on "Filed N new photos". Explicit intent only. */
+    static final String ACTION_UNDO_FILED = "com.android.gallery3d.fileops.AUTO_FILE_UNDO";
+    /** "Filed N new photos" was swiped away. Explicit intent only. */
+    static final String ACTION_FILED_DISMISSED =
+            "com.android.gallery3d.fileops.AUTO_FILE_DISMISSED";
+    static final String EXTRA_WINDOW_START = "com.android.gallery3d.fileops.WINDOW_START";
+    static final String EXTRA_WINDOW_END = "com.android.gallery3d.fileops.WINDOW_END";
+
+    /**
+     * Runs, Undos and dismissals one at a time: each loads, edits and saves
+     * the same AutoFileLog, and two at once would lose one side's changes.
+     */
+    private static final Executor SERIAL = Executors.newSingleThreadExecutor();
+
+    /** What one run did, for the notifications. */
+    public static final class RunOutcome {
+        public static final RunOutcome NOTHING = new RunOutcome(0, 0);
+
+        public final int moved;
+        /** Skipped because Android wants the user's permission (CONSENT_REQUIRED). */
+        public final int needPermission;
+
+        RunOutcome(int moved, int needPermission) {
+            this.moved = moved;
+            this.needPermission = needPermission;
+        }
+    }
+
+    static Intent undoIntent(Context context, long windowStart, long windowEnd) {
+        Intent intent = new Intent(context, AutoFileReceiver.class);
+        intent.setAction(ACTION_UNDO_FILED);
+        intent.putExtra(EXTRA_WINDOW_START, windowStart);
+        intent.putExtra(EXTRA_WINDOW_END, windowEnd);
+        return intent;
+    }
+
+    static Intent dismissedIntent(Context context, long windowStart) {
+        Intent intent = new Intent(context, AutoFileReceiver.class);
+        intent.setAction(ACTION_FILED_DISMISSED);
+        intent.putExtra(EXTRA_WINDOW_START, windowStart);
+        return intent;
+    }
 
     private static final long MIN_INTERVAL_MILLIS = 60L * 1000L;
 
@@ -81,19 +123,20 @@ public class AutoFileReceiver extends BroadcastReceiver {
     }
 
     /** Run the rule once, synchronously. Safe to call off the main thread only. */
-    public static void applyRule(Context context, long nowMillis) {
+    public static RunOutcome applyRule(Context context, long nowMillis) {
         AutoFileSettings settings = AutoFileSettings.from(context);
-        if (!settings.isEnabled()) return;
+        if (!settings.isEnabled()) return RunOutcome.NOTHING;
 
         ContentResolverGateway gateway = new ContentResolverGateway(context);
-        AutoFileScheduler scheduler =
-                new AutoFileScheduler(gateway, settings, TimeZone.getDefault());
+        AutoFileLog log = AutoFileLog.load(context);
+        AutoFileScheduler scheduler = new AutoFileScheduler(gateway, settings,
+                TimeZone.getDefault(), log.undoneUris());
         List<AutoFileScheduler.Plan> plans = scheduler.planFor(nowMillis);
-        if (plans.isEmpty()) return;
+        if (plans.isEmpty()) return RunOutcome.NOTHING;
 
         FileOpEngine engine = new FileOpEngine(gateway);
-        AutoFileLog log = AutoFileLog.load(context);
         int moved = 0;
+        int needPermission = 0;
         for (AutoFileScheduler.Plan plan : plans) {
             // Make sure the destination folder exists before moving into it.
             FolderCreator.create(gateway,
@@ -101,19 +144,23 @@ public class AutoFileReceiver extends BroadcastReceiver {
                     RelativePaths.lastSegment(plan.destRelativePath));
             FileOpResult result = engine.move(plan.item, plan.destRelativePath);
             if (result.status == FileOpResult.Status.CONSENT_REQUIRED) {
-                // An automatic rule must never pop a dialog. Skip and retry later.
+                // An automatic rule must never pop a dialog. Skip, count it so
+                // the user is told why, and retry next run.
+                needPermission++;
                 continue;
             }
             log.record(result, plan.destRelativePath, nowMillis);
             if (result.isOk()) moved++;
         }
         log.save(context);
-        Log.i(TAG, "Auto-filed " + moved + " of " + plans.size() + " candidates");
+        Log.i(TAG, "Auto-filed " + moved + " of " + plans.size() + " candidates, "
+                + needPermission + " need permission");
+        return new RunOutcome(moved, needPermission);
     }
 
     /**
      * Put one auto-filed photo back where it came from, using the log entry the
-     * automatic move wrote.
+     * automatic move wrote. It is then never auto-filed again.
      *
      * @return true when the photo was moved back.
      */
@@ -121,34 +168,59 @@ public class AutoFileReceiver extends BroadcastReceiver {
         AutoFileLog log = AutoFileLog.load(context);
         AutoFileLog.Entry entry = log.find(itemUri);
         if (entry == null) return false;
-
-        ContentResolverGateway gateway = new ContentResolverGateway(context);
-        try {
-            gateway.updateLocation(Uri.parse(entry.itemUri), entry.fromRelativePath,
-                    entry.displayName);
-        } catch (PendingConsentException consent) {
-            return false;
-        } catch (java.io.IOException failure) {
-            Log.w(TAG, "Could not undo auto-file of " + itemUri, failure);
-            return false;
-        }
-        log.remove(itemUri);
+        AutoFileUndo.Result result = AutoFileUndo.undoEntry(
+                new ContentResolverGateway(context), log, entry, System.currentTimeMillis());
         log.save(context);
-        return true;
+        return result == AutoFileUndo.Result.RESTORED;
+    }
+
+    /**
+     * The Undo button: put back every photo the notification counted. Refuses
+     * a window that is past its lifetime (a stale PendingIntent). Never throws.
+     */
+    static AutoFileNotices.UndoOutcome undoFiled(Context context, long windowStart,
+            long windowEnd, long nowMillis) {
+        if (!AutoFileNotices.isUndoWindowOpen(windowStart, nowMillis)) {
+            return new AutoFileNotices.UndoOutcome();
+        }
+        AutoFileLog log = AutoFileLog.load(context);
+        AutoFileNotices.UndoOutcome outcome = AutoFileUndo.undoWindow(
+                new ContentResolverGateway(context), log, windowStart, windowEnd, nowMillis);
+        log.save(context);
+        Log.i(TAG, "Undo put back " + outcome.restored + ", " + outcome.gone
+                + " gone, " + outcome.failed + " failed");
+        return outcome;
     }
 
     @Override
-    public void onReceive(Context context, Intent intent) {
-        if (!ACTION_AUTO_FILE.equals(intent.getAction())) return;
+    public void onReceive(Context context, final Intent intent) {
+        final String action = intent == null ? null : intent.getAction();
+        if (!ACTION_AUTO_FILE.equals(action) && !ACTION_UNDO_FILED.equals(action)
+                && !ACTION_FILED_DISMISSED.equals(action)) {
+            return;
+        }
         final Context appContext = context.getApplicationContext();
         final PendingResult pendingResult = goAsync();
-        AsyncTask.THREAD_POOL_EXECUTOR.execute(new Runnable() {
+        SERIAL.execute(new Runnable() {
             @Override
             public void run() {
                 try {
-                    applyRule(appContext, System.currentTimeMillis());
+                    long now = System.currentTimeMillis();
+                    if (ACTION_AUTO_FILE.equals(action)) {
+                        RunOutcome outcome = applyRule(appContext, now);
+                        AutoFileNotifier.afterRun(appContext, outcome, now);
+                    } else if (ACTION_UNDO_FILED.equals(action)) {
+                        long start = intent.getLongExtra(EXTRA_WINDOW_START,
+                                AutoFileNotices.NONE);
+                        long end = intent.getLongExtra(EXTRA_WINDOW_END, AutoFileNotices.NONE);
+                        AutoFileNotifier.afterUndo(appContext,
+                                undoFiled(appContext, start, end, now));
+                    } else {
+                        AutoFileNotifier.afterDismissed(appContext,
+                                intent.getLongExtra(EXTRA_WINDOW_START, AutoFileNotices.NONE));
+                    }
                 } catch (Throwable failure) {
-                    Log.e(TAG, "Auto-file run threw", failure);
+                    Log.e(TAG, "Auto-file " + action + " threw", failure);
                 } finally {
                     pendingResult.finish();
                 }

@@ -20,6 +20,13 @@
                 android:title="@string/auto_file_enabled_title"
                 android:summary="@string/auto_file_enabled_summary"
                 android:defaultValue="false" />
+        <!-- Shown only while Auto-file is on and "Manage media without asking"
+             is not allowed (Android 12+); GallerySettings adds/removes it. -->
+        <Preference
+                android:key="auto_file_permission_note"
+                android:title="@string/auto_file_permission_note_title"
+                android:summary="@string/auto_file_permission_note_summary"
+                android:persistent="false" />
         <EditTextPreference
                 android:key="auto_file_watched_folder"
                 android:title="@string/auto_file_folder_title"

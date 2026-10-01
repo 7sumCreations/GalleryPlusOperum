@@ -24,6 +24,12 @@ public final class AutoFileLog {
 
     private static final String PREFS_NAME = "auto_file_log";
     private static final String KEY_ENTRIES = "entries";
+    /**
+     * Photos the user put back with Undo. Auto-file must never file these
+     * again, or Undo would be reversed by the very next run: a put-back photo
+     * keeps its DATE_ADDED, so it still looks "new" to the scheduler.
+     */
+    private static final String KEY_UNDONE = "undone";
     private static final String SEPARATOR = "\t";
 
     public static final class Entry {
@@ -60,12 +66,25 @@ public final class AutoFileLog {
     }
 
     private final List<Entry> mEntries;
+    /** Uri -> when it was undone; insertion-ordered so the oldest drop first. */
+    private final java.util.LinkedHashMap<String, Long> mUndone =
+            new java.util.LinkedHashMap<String, Long>();
 
     public AutoFileLog(List<Entry> existing) {
         mEntries = new ArrayList<Entry>(existing);
     }
 
+    /** Never throws: a log that cannot be read is treated as empty. */
     public static AutoFileLog load(Context context) {
+        try {
+            return loadOrThrow(context);
+        } catch (RuntimeException unreadable) {
+            android.util.Log.w("AutoFileLog", "auto-file log unreadable", unreadable);
+            return new AutoFileLog(Collections.<Entry>emptyList());
+        }
+    }
+
+    private static AutoFileLog loadOrThrow(Context context) {
         SharedPreferences prefs = context.getApplicationContext()
                 .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         Set<String> lines = prefs.getStringSet(KEY_ENTRIES, Collections.<String>emptySet());
@@ -80,7 +99,30 @@ public final class AutoFileLog {
                 return Long.compare(a.whenMillis, b.whenMillis);
             }
         });
-        return new AutoFileLog(entries);
+        AutoFileLog log = new AutoFileLog(entries);
+        List<String[]> undone = new ArrayList<String[]>();
+        for (String line : prefs.getStringSet(KEY_UNDONE, Collections.<String>emptySet())) {
+            String[] parts = line.split(SEPARATOR, -1);
+            if (parts.length == 2) undone.add(parts);
+        }
+        Collections.sort(undone, new java.util.Comparator<String[]>() {
+            @Override
+            public int compare(String[] a, String[] b) {
+                return Long.compare(parseLong(a[1]), parseLong(b[1]));
+            }
+        });
+        for (String[] parts : undone) {
+            log.markUndone(parts[0], parseLong(parts[1]));
+        }
+        return log;
+    }
+
+    private static long parseLong(String raw) {
+        try {
+            return Long.parseLong(raw);
+        } catch (NumberFormatException malformed) {
+            return 0L;
+        }
     }
 
     public void record(FileOpResult result, String destRelativePath, long whenMillis) {
@@ -114,13 +156,46 @@ public final class AutoFileLog {
         }
     }
 
-    public void save(Context context) {
-        Set<String> lines = new LinkedHashSet<String>();
-        for (Entry entry : mEntries) {
-            lines.add(entry.serialise());
+    /**
+     * Remember that the user put this photo back, so it is never auto-filed
+     * again. Capped like the log itself; the oldest are forgotten first.
+     */
+    public void markUndone(String itemUri, long whenMillis) {
+        mUndone.remove(itemUri);
+        mUndone.put(itemUri, whenMillis);
+        java.util.Iterator<String> oldest = mUndone.keySet().iterator();
+        while (mUndone.size() > MAX_ENTRIES && oldest.hasNext()) {
+            oldest.next();
+            oldest.remove();
         }
-        context.getApplicationContext()
-                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .edit().putStringSet(KEY_ENTRIES, lines).apply();
+    }
+
+    public boolean isUndone(String itemUri) {
+        return mUndone.containsKey(itemUri);
+    }
+
+    /** Uris auto-file must leave alone because the user undid their filing. */
+    public Set<String> undoneUris() {
+        return Collections.unmodifiableSet(new LinkedHashSet<String>(mUndone.keySet()));
+    }
+
+    /** Never throws: failing to persist the log must not abort a run or an Undo. */
+    public void save(Context context) {
+        try {
+            Set<String> lines = new LinkedHashSet<String>();
+            for (Entry entry : mEntries) {
+                lines.add(entry.serialise());
+            }
+            Set<String> undone = new LinkedHashSet<String>();
+            for (java.util.Map.Entry<String, Long> item : mUndone.entrySet()) {
+                undone.add(item.getKey() + SEPARATOR + item.getValue());
+            }
+            context.getApplicationContext()
+                    .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    .edit().putStringSet(KEY_ENTRIES, lines)
+                    .putStringSet(KEY_UNDONE, undone).apply();
+        } catch (RuntimeException couldNotPersist) {
+            android.util.Log.w("AutoFileLog", "could not save auto-file log", couldNotPersist);
+        }
     }
 }
