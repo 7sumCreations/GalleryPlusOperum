@@ -240,6 +240,10 @@
 
     <!-- String indicating an error when muting the video. [CHAR LIMIT=30] -->
     <string name="video_mute_err">Can\'t mute video.</string>
+    <!-- Toast when trimming a video fails. -->
+    <string name="video_trim_err">Can\'t trim video.</string>
+    <!-- Toast when a trimmed or muted video was saved but could not be opened. -->
+    <string name="video_open_err">Video saved, but it couldn\'t be opened.</string>
     <!-- String indicating an error when playing the video. [CHAR LIMIT=30] -->
     <string name="video_err">Can\'t play video.</string>
 

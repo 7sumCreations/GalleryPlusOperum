@@ -18,22 +18,19 @@ package com.android.gallery3d.app;
 
 import android.app.Activity;
 import android.app.ProgressDialog;
-import android.content.Intent;
 import android.net.Uri;
 import android.os.Handler;
-import android.provider.MediaStore;
+import android.util.Log;
 import android.widget.Toast;
-
-import androidx.core.content.FileProvider;
 
 import com.android.gallery3d.R;
 import com.android.gallery3d.data.MediaItem;
 import com.android.gallery3d.util.SaveVideoFileInfo;
 import com.android.gallery3d.util.SaveVideoFileUtils;
 
-import java.io.IOException;
-
 public class MuteVideo {
+
+    private static final String TAG = "MuteVideo";
 
     private ProgressDialog mMuteProgress;
 
@@ -60,38 +57,50 @@ public class MuteVideo {
         new Thread(new Runnable() {
                 @Override
             public void run() {
+                Uri savedUri = null;
+                boolean ok = false;
                 try {
                     VideoUtils.startMute(mFilePath, mDstFileInfo);
-                    SaveVideoFileUtils.insertContent(
+                    savedUri = SaveVideoFileUtils.insertContent(
                             mDstFileInfo, mActivity.getContentResolver(), mUri);
-                } catch (IOException e) {
-                    Toast.makeText(mActivity, mActivity.getString(R.string.video_mute_err),
-                            Toast.LENGTH_SHORT).show();
+                    ok = true;
+                } catch (Exception e) {
+                    // IOException from the muxer, or a RuntimeException from
+                    // MediaStore / the codec stack. Never let it kill the app.
+                    Log.w(TAG, "mute failed", e);
+                    SaveVideoFileUtils.deleteQuietly(mDstFileInfo);
                 }
-                // After muting is done, trigger the UI changed.
+                final boolean succeeded = ok;
+                final Uri resultUri = savedUri;
+                // After muting is done, trigger the UI changed. Toasts and
+                // the viewer must run on the main thread.
                 mHandler.post(new Runnable() {
                         @Override
                     public void run() {
-                        Toast.makeText(mActivity.getApplicationContext(),
-                                mActivity.getString(R.string.save_into,
-                                        mDstFileInfo.mFolderName),
-                                Toast.LENGTH_SHORT)
-                                .show();
+                        if (!succeeded) {
+                            Toast.makeText(mActivity.getApplicationContext(),
+                                    R.string.video_mute_err, Toast.LENGTH_SHORT).show();
+                        } else {
+                            Toast.makeText(mActivity.getApplicationContext(),
+                                    mActivity.getString(R.string.save_into,
+                                            mDstFileInfo.mFolderName),
+                                    Toast.LENGTH_SHORT)
+                                    .show();
+                        }
 
                         if (mMuteProgress != null) {
-                            mMuteProgress.dismiss();
+                            try {
+                                mMuteProgress.dismiss();
+                            } catch (RuntimeException e) {
+                                // Window already gone.
+                            }
                             mMuteProgress = null;
 
                             // Show the result only when the activity not
                             // stopped.
-                            Intent intent = new Intent(android.content.Intent.ACTION_VIEW);
-                            Uri videoUri = FileProvider.getUriForFile(
-                                    mActivity,
-                                    mActivity.getApplicationContext().getPackageName()
-                                            + ".fileprovider", mDstFileInfo.mFile);
-                            intent.setDataAndType(videoUri, "video/*");
-                            intent.putExtra(MediaStore.EXTRA_FINISH_ON_COMPLETION, false);
-                            mActivity.startActivity(intent);
+                            if (succeeded) {
+                                SaveVideoFileUtils.viewSavedVideo(mActivity, resultUri);
+                            }
                         }
                     }
                 });

@@ -25,15 +25,13 @@ import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
-import android.provider.MediaStore;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.VideoView;
-
-import androidx.core.content.FileProvider;
 
 import com.android.gallery3d.R;
 import com.android.gallery3d.util.SaveVideoFileInfo;
@@ -46,6 +44,8 @@ public class TrimVideo extends Activity implements
         MediaPlayer.OnErrorListener,
         MediaPlayer.OnCompletionListener,
         ControllerOverlay.Listener {
+
+    private static final String TAG = "TrimVideo";
 
     private VideoView mVideoView;
     private TextView mSaveVideoTextView;
@@ -232,45 +232,61 @@ public class TrimVideo extends Activity implements
 
         mDstFileInfo = SaveVideoFileUtils.getDstMp4FileInfo(TIME_STAMP_NAME,
                 getContentResolver(), mUri, getString(R.string.folder_download));
-        final File mSrcFile = new File(mSrcVideoPath);
+        final String srcPath = mSrcVideoPath;
 
         showProgressDialog();
 
         new Thread(new Runnable() {
             @Override
             public void run() {
+                Uri savedUri = null;
+                boolean ok = false;
                 try {
-                    VideoUtils.startTrim(mSrcFile, mDstFileInfo.mFile,
+                    if (srcPath == null) {
+                        throw new IOException("no source path for " + mUri);
+                    }
+                    VideoUtils.startTrim(new File(srcPath), mDstFileInfo.mFile,
                             mTrimStartTime, mTrimEndTime);
                     // Update the database for adding a new video file.
-                    SaveVideoFileUtils.insertContent(mDstFileInfo,
+                    savedUri = SaveVideoFileUtils.insertContent(mDstFileInfo,
                             getContentResolver(), mUri);
-                } catch (IOException e) {
-                    e.printStackTrace();
+                    ok = true;
+                } catch (Exception e) {
+                    // IOException from the muxer, or a RuntimeException from
+                    // MediaStore / the codec stack. Never let it kill the app.
+                    Log.w(TAG, "trim failed", e);
+                    SaveVideoFileUtils.deleteQuietly(mDstFileInfo);
                 }
+                final boolean succeeded = ok;
+                final Uri resultUri = savedUri;
                 // After trimming is done, trigger the UI changed.
                 mHandler.post(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(getApplicationContext(),
-                            getString(R.string.save_into, mDstFileInfo.mFolderName),
-                            Toast.LENGTH_SHORT)
-                            .show();
+                        if (succeeded) {
+                            Toast.makeText(getApplicationContext(),
+                                getString(R.string.save_into, mDstFileInfo.mFolderName),
+                                Toast.LENGTH_SHORT)
+                                .show();
+                        } else {
+                            Toast.makeText(getApplicationContext(),
+                                    R.string.video_trim_err, Toast.LENGTH_SHORT).show();
+                        }
                         // TODO: change trimming into a service to avoid
                         // this progressDialog and add notification properly.
                         if (mProgress != null) {
-                            mProgress.dismiss();
+                            try {
+                                mProgress.dismiss();
+                            } catch (RuntimeException e) {
+                                // Window already gone.
+                            }
                             mProgress = null;
-                            // Show the result only when the activity not stopped.
-                            Intent intent = new Intent(android.content.Intent.ACTION_VIEW);
-                            Uri videoUri = FileProvider.getUriForFile(
-                                    TrimVideo.this,
-                                    getApplicationContext().getPackageName()
-                                            + ".fileprovider", mDstFileInfo.mFile);
-                            intent.setDataAndType(videoUri, "video/*");
-                            intent.putExtra(MediaStore.EXTRA_FINISH_ON_COMPLETION, false);
-                            startActivity(intent);
-                            finish();
+                            // Show the result only when the activity not stopped,
+                            // and only when there is a result to show.
+                            if (succeeded) {
+                                SaveVideoFileUtils.viewSavedVideo(TrimVideo.this, resultUri);
+                                finish();
+                            }
                         }
                     }
                 });
