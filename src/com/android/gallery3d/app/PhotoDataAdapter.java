@@ -1007,6 +1007,18 @@ public class PhotoDataAdapter implements PhotoPage.Model {
         }
     }
 
+    /**
+     * Keep the focus inside an album that has just shrunk. This must use the
+     * size just loaded: the old code clamped against mSize, the size before
+     * the reload, so removing the album's last item left the focus one past
+     * the end, on no item at all, and the viewer went blank until Back.
+     * Don't change the index if the album is now empty.
+     */
+    static int clampFocusIndex(int index, int newSize) {
+        if (newSize > 0 && index >= newSize) return newSize - 1;
+        return index;
+    }
+
     private class ReloadTask extends Thread {
         private volatile boolean mActive = true;
         private volatile boolean mDirty = true;
@@ -1078,12 +1090,7 @@ public class PhotoDataAdapter implements PhotoPage.Model {
                     }
                 }
 
-                // Don't change index if mSize == 0
-                if (mSize > 0) {
-                    if (index >= mSize) index = mSize - 1;
-                }
-
-                info.indexHint = index;
+                info.indexHint = clampFocusIndex(index, info.size);
 
                 executeAndWait(new UpdateContent(info));
             }

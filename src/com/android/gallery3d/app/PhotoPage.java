@@ -62,6 +62,7 @@ import com.android.gallery3d.picasasource.PicasaSource;
 import com.android.gallery3d.ui.DetailsHelper;
 import com.android.gallery3d.ui.DetailsHelper.CloseListener;
 import com.android.gallery3d.ui.DetailsHelper.DetailsSource;
+import com.android.gallery3d.ui.GLRoot;
 import com.android.gallery3d.ui.GLRootView;
 import com.android.gallery3d.ui.GLView;
 import com.android.gallery3d.ui.MenuExecutor;
@@ -838,15 +839,81 @@ public abstract class PhotoPage extends ActivityState implements
         if (mOriginalSetPathString == null) return;
 
         if (mAppBridge == null) {
-            // We're in view mode so set up the stacks on our own.
-            Bundle data = new Bundle(getData());
-            data.putString(AlbumPage.KEY_MEDIA_PATH, mOriginalSetPathString);
-            data.putString(AlbumPage.KEY_PARENT_MEDIA_PATH,
-                    mActivity.getDataManager().getTopSetPath(
-                            DataManager.INCLUDE_ALL));
-            mActivity.getStateManager().switchState(this, AlbumPage.class, data);
+            openAlbumInPlace();
         } else {
             GalleryUtils.startGalleryActivity(mActivity);
+        }
+    }
+
+    /** View mode has no album underneath: replace this page with the album's grid. */
+    private void openAlbumInPlace() {
+        Bundle data = new Bundle(getData());
+        data.putString(AlbumPage.KEY_MEDIA_PATH, mOriginalSetPathString);
+        data.putString(AlbumPage.KEY_PARENT_MEDIA_PATH,
+                mActivity.getDataManager().getTopSetPath(
+                        DataManager.INCLUDE_ALL));
+        mActivity.getStateManager().switchState(this, AlbumPage.class, data);
+    }
+
+    /** Where the viewer goes once the item it shows has been sent out of its album. */
+    enum AfterRemoval {
+        /** Pop back to the page underneath: the grid (or Trash) it was opened from. */
+        FINISH_PAGE,
+        /** Nothing suitable underneath: replace this page with the album's grid. */
+        OPEN_ALBUM,
+        /** A lone item from a VIEW intent: there is nothing left to show. */
+        FINISH_ACTIVITY,
+        /** Camera filmstrip, secure album or a plain VIEW intent: move to a neighbour. */
+        STAY
+    }
+
+    static AfterRemoval afterRemoval(boolean cameraOrSecure, int stateCount,
+            boolean startInFilmstrip, boolean treatBackAsUp, boolean hasAlbum) {
+        if (cameraOrSecure) return AfterRemoval.STAY;
+        if (!hasAlbum) return AfterRemoval.FINISH_ACTIVITY;
+        // Opened from a grid: that grid is underneath. (A filmstrip replaced
+        // its grid, so popping it would skip past the album.)
+        if (stateCount > 1 && !startInFilmstrip) return AfterRemoval.FINISH_PAGE;
+        // Launched straight into the viewer: only rebuild the album when Back
+        // is meant to behave as Up; otherwise Back leaves the app, so stay.
+        if (stateCount > 1 || treatBackAsUp) return AfterRemoval.OPEN_ALBUM;
+        return AfterRemoval.STAY;
+    }
+
+    /**
+     * The item on show has just been handed to FileOpService to leave this
+     * album (Delete to Trash, Restore, Delete forever): go back to the grid the
+     * viewer came from. The Undo snackbar is the activity's, so it still shows
+     * there when the batch finishes.
+     */
+    private void leaveAfterItemRemoved() {
+        StateManager states = mActivity.getStateManager();
+        // A dialog callback can outlive the page (rotation, Back): never
+        // finish a page that is not on top, StateManager throws for that.
+        if (!mIsActive || states.getTopState() != this) return;
+        AfterRemoval next = afterRemoval(mAppBridge != null || mSecureAlbum != null,
+                states.getStateCount(), mStartInFilmstrip, mTreatBackAsUp,
+                mOriginalSetPathString != null);
+        GLRoot root = mActivity.getGLRoot();
+        root.lockRenderThread();
+        try {
+            switch (next) {
+                case FINISH_PAGE:
+                    setResult();
+                    states.finishState(this);
+                    break;
+                case OPEN_ALBUM:
+                    openAlbumInPlace();
+                    break;
+                case FINISH_ACTIVITY:
+                    states.finishState(this);
+                    break;
+                case STAY:
+                default:
+                    break;
+            }
+        } finally {
+            root.unlockRenderThread();
         }
     }
 
@@ -1066,8 +1133,8 @@ public abstract class PhotoPage extends ActivityState implements
                 return true;
             }
             case R.id.action_restore: {
-                // Only offered for a trashed item (SUPPORT_RESTORE). Once it
-                // leaves the Trash album the viewer moves on, as with Delete.
+                // Only offered for a trashed item (SUPPORT_RESTORE). As with
+                // Delete, the viewer then returns to the Trash grid.
                 startSingleItemBatch(
                         com.android.gallery3d.fileops.FileOpBatch.Kind.RESTORE, path);
                 return true;
@@ -1133,26 +1200,27 @@ public abstract class PhotoPage extends ActivityState implements
                 .show();
     }
 
-    /**
-     * Send one item to Trash through FileOpService. When it leaves MediaStore
-     * the album reloads and PhotoDataAdapter moves on to the neighbouring item,
-     * or finishes this page if the album is now empty.
-     */
+    /** Send one item to Trash through FileOpService, then return to the grid. */
     private void sendToTrash(Path path) {
         startSingleItemBatch(com.android.gallery3d.fileops.FileOpBatch.Kind.TRASH, path);
     }
 
     /**
      * Run one file-op batch on the item being viewed. Trash, Restore and
-     * Delete forever all take the item out of the album being browsed, so the
-     * reload moves the viewer on (or closes it on an empty album).
+     * Delete forever all take the item out of the album being browsed, so once
+     * the batch is handed over the viewer returns to the grid it came from.
+     * Consent, if MediaStore wants it, is asked by ConsentActivity over that
+     * grid; a refusal simply leaves the item where it was.
      */
     private void startSingleItemBatch(com.android.gallery3d.fileops.FileOpBatch.Kind kind,
             Path path) {
         ArrayList<Path> one = new ArrayList<Path>(1);
         one.add(path);
         try {
-            mMenuExecutor.startFileOpBatch(kind, null, one);
+            // null: the item had already gone, and the user has been told.
+            if (mMenuExecutor.startFileOpBatch(kind, null, one) != null) {
+                leaveAfterItemRemoved();
+            }
         } catch (RuntimeException failure) {
             // e.g. the service could not be started: say so rather than do nothing.
             Log.w(TAG, "Could not start the " + kind + " batch for " + path, failure);
