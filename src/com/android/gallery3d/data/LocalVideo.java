@@ -51,6 +51,7 @@ public class LocalVideo extends LocalMediaItem {
     private static final int INDEX_BUCKET_ID = 10;
     private static final int INDEX_SIZE = 11;
     private static final int INDEX_RESOLUTION = 12;
+    private static final int INDEX_FAVOURITE = 13;
 
     static final String[] PROJECTION = new String[] {
             VideoColumns._ID,
@@ -66,6 +67,7 @@ public class LocalVideo extends LocalMediaItem {
             VideoColumns.BUCKET_ID,
             VideoColumns.SIZE,
             VideoColumns.RESOLUTION,
+            FavouriteColumn.column(),
     };
 
     private final GalleryApp mApplication;
@@ -112,6 +114,7 @@ public class LocalVideo extends LocalMediaItem {
         bucketId = cursor.getInt(INDEX_BUCKET_ID);
         fileSize = cursor.getLong(INDEX_SIZE);
         parseResolution(cursor.getString(INDEX_RESOLUTION));
+        favourite = FavouriteColumn.isFavourite(cursor.getInt(INDEX_FAVOURITE));
     }
 
     private void parseResolution(String resolution) {
@@ -151,6 +154,8 @@ public class LocalVideo extends LocalMediaItem {
                 durationInSec, cursor.getInt(INDEX_DURATION) / 1000);
         bucketId = uh.update(bucketId, cursor.getInt(INDEX_BUCKET_ID));
         fileSize = uh.update(fileSize, cursor.getLong(INDEX_SIZE));
+        // Not through UpdateHelper: see LocalImage.updateFromCursor.
+        favourite = FavouriteColumn.isFavourite(cursor.getInt(INDEX_FAVOURITE));
         return uh.isUpdated();
     }
 

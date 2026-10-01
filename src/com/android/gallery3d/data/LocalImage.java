@@ -66,6 +66,7 @@ public class LocalImage extends LocalMediaItem {
     private static final int INDEX_SIZE = 11;
     private static final int INDEX_WIDTH = 12;
     private static final int INDEX_HEIGHT = 13;
+    private static final int INDEX_FAVOURITE = 14;
 
     static final String[] PROJECTION =  {
             ImageColumns._ID,           // 0
@@ -81,7 +82,8 @@ public class LocalImage extends LocalMediaItem {
             ImageColumns.BUCKET_ID,     // 10
             ImageColumns.SIZE,          // 11
             "0",                        // 12
-            "0"                         // 13
+            "0",                        // 13
+            FavouriteColumn.column()    // 14
     };
 
     static {
@@ -143,6 +145,7 @@ public class LocalImage extends LocalMediaItem {
         fileSize = cursor.getLong(INDEX_SIZE);
         width = cursor.getInt(INDEX_WIDTH);
         height = cursor.getInt(INDEX_HEIGHT);
+        favourite = FavouriteColumn.isFavourite(cursor.getInt(INDEX_FAVOURITE));
     }
 
     @Override
@@ -165,6 +168,9 @@ public class LocalImage extends LocalMediaItem {
         fileSize = uh.update(fileSize, cursor.getLong(INDEX_SIZE));
         width = uh.update(width, cursor.getInt(INDEX_WIDTH));
         height = uh.update(height, cursor.getInt(INDEX_HEIGHT));
+        // Not through UpdateHelper: a new data version would make the viewer
+        // reload the picture, and only the star depends on this flag.
+        favourite = FavouriteColumn.isFavourite(cursor.getInt(INDEX_FAVOURITE));
         return uh.isUpdated();
     }
 

@@ -62,6 +62,7 @@ import com.android.gallery3d.picasasource.PicasaSource;
 import com.android.gallery3d.ui.DetailsHelper;
 import com.android.gallery3d.ui.DetailsHelper.CloseListener;
 import com.android.gallery3d.ui.DetailsHelper.DetailsSource;
+import com.android.gallery3d.ui.FavouriteMenu;
 import com.android.gallery3d.ui.GLRoot;
 import com.android.gallery3d.ui.GLRootView;
 import com.android.gallery3d.ui.GLView;
@@ -489,6 +490,9 @@ public abstract class PhotoPage extends ActivityState implements
                     if (!mModel.isEmpty()) {
                         MediaItem photo = mModel.getMediaItem(0);
                         if (photo != null) updateCurrentPhoto(photo);
+                        // Same photo, but a reload may have changed its
+                        // IS_FAVORITE (a star tap, or another app).
+                        refreshFavouriteMenuItem();
                     } else if (mIsActive) {
                         // We only want to finish the PhotoPage if there is no
                         // deletion that the user can undo.
@@ -729,6 +733,15 @@ public abstract class PhotoPage extends ActivityState implements
             }
         }
         MenuExecutor.updateMenuOperation(menu, supportedOperations);
+        refreshFavouriteMenuItem();
+    }
+
+    /** Make the star show whether the photo on show is a favourite. */
+    private void refreshFavouriteMenuItem() {
+        Menu menu = mActionBar.getMenu();
+        if (menu == null || mCurrentPhoto == null) return;
+        FavouriteMenu.apply(menu.findItem(R.id.action_favourite),
+                mCurrentPhoto.isFavourite());
     }
 
     private boolean canDoSlideShow() {
@@ -1103,25 +1116,23 @@ public abstract class PhotoPage extends ActivityState implements
                 return true;
             }
             case R.id.action_favourite: {
-                final android.net.Uri uri = manager.getContentUri(path);
-                final com.android.gallery3d.fileops.ContentResolverGateway gateway =
-                        new com.android.gallery3d.fileops.ContentResolverGateway(
-                                mActivity.getAndroidContext());
-                final com.android.gallery3d.fileops.MediaItemInfo info = gateway.query(uri);
-                final boolean makeFavourite = info == null || !info.favourite;
-                java.util.ArrayList<android.net.Uri> one =
-                        new java.util.ArrayList<android.net.Uri>(1);
-                one.add(uri);
-                ((android.app.Activity) mActivity).startForegroundService(
-                        com.android.gallery3d.fileops.FileOpService.runIntent(
-                                (android.app.Activity) mActivity,
-                                makeFavourite
-                                        ? com.android.gallery3d.fileops.FileOpBatch.Kind.FAVOURITE
-                                        : com.android.gallery3d.fileops.FileOpBatch
-                                                .Kind.UNFAVOURITE,
-                                one, null,
-                                com.android.gallery3d.fileops.FileOpBatch.nextToken()));
-                item.setTitle(makeFavourite ? R.string.unfavourite : R.string.favourite);
+                // The item carries IS_FAVORITE from its last load, so no
+                // MediaStore query on the UI thread. Show the new state at once;
+                // the album reload after the write (or after a refused consent)
+                // brings the star back in line with MediaStore.
+                final boolean favourite = current.isFavourite();
+                ArrayList<Path> one = new ArrayList<Path>(1);
+                one.add(path);
+                try {
+                    if (mMenuExecutor.startFileOpBatch(
+                            FavouriteMenu.kindFor(favourite), null, one) != null) {
+                        FavouriteMenu.apply(item, !favourite);
+                    }
+                } catch (RuntimeException failure) {
+                    Log.w(TAG, "Could not start the favourite batch for " + path, failure);
+                    Toast.makeText(mActivity, R.string.file_op_start_failed,
+                            Toast.LENGTH_LONG).show();
+                }
                 return true;
             }
             case R.id.action_delete: {

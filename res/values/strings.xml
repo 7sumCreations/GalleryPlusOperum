@@ -542,6 +542,8 @@
     <string name="favourite">Favourite</string>
     <!-- Heart action when the photo is already a favourite. -->
     <string name="unfavourite">Remove from Favourites</string>
+    <!-- Star action when the photo (or every selected photo) is not yet a favourite. -->
+    <string name="add_to_favourites">Add to Favourites</string>
 
     <!-- Name of the album listing deleted photos awaiting purge. -->
     <string name="trash">Trash</string>

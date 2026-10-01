@@ -94,6 +94,14 @@ public abstract class MediaItem extends MediaObject {
 
     public abstract String getMimeType();
 
+    /**
+     * Whether MediaStore's IS_FAVORITE flag was set when this item was last
+     * loaded. Only local images and videos carry it.
+     */
+    public boolean isFavourite() {
+        return false;
+    }
+
     public String getFilePath() {
         return "";
     }

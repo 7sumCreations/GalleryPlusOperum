@@ -46,6 +46,9 @@ public abstract class LocalMediaItem extends MediaItem {
     public int bucketId;
     public int width;
     public int height;
+    // IS_FAVORITE (see FavouriteColumn). Written by the loader thread, read
+    // by the viewer's menu on the UI thread.
+    protected volatile boolean favourite;
 
     public LocalMediaItem(Path path, long version) {
         super(path, version);
@@ -72,6 +75,11 @@ public abstract class LocalMediaItem extends MediaItem {
     }
 
     abstract protected boolean updateFromCursor(Cursor cursor);
+
+    @Override
+    public boolean isFavourite() {
+        return favourite;
+    }
 
     public int getBucketId() {
         return bucketId;

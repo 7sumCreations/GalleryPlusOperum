@@ -34,6 +34,7 @@ import com.android.gallery3d.app.AbstractGalleryActivity;
 import com.android.gallery3d.common.ApiHelper;
 import com.android.gallery3d.common.Utils;
 import com.android.gallery3d.data.DataManager;
+import com.android.gallery3d.data.MediaItem;
 import com.android.gallery3d.data.MediaObject;
 import com.android.gallery3d.data.MediaObject.PanoramaSupportCallback;
 import com.android.gallery3d.data.Path;
@@ -75,6 +76,9 @@ public class ActionModeHandler implements Callback, PopupList.OnPopupItemClickLi
     private final SelectionManager mSelectionManager;
     private Menu mMenu;
     private MenuItem mShareMenuItem;
+    // True when every selected item is already a favourite: the star then
+    // removes them. Written and read on the UI thread.
+    private boolean mSelectionIsFavourite;
     // Built off the UI thread for the current selection; read on the UI thread
     // when Share is tapped. Null while being rebuilt or when nothing can be shared.
     private Intent mShareIntent;
@@ -244,7 +248,7 @@ public class ActionModeHandler implements Callback, PopupList.OnPopupItemClickLi
             }
             if (action == R.id.action_favourite) {
                 mMenuExecutor.startFileOpBatch(
-                        com.android.gallery3d.fileops.FileOpBatch.Kind.FAVOURITE, null);
+                        FavouriteMenu.kindFor(mSelectionIsFavourite), null);
                 mSelectionManager.leaveSelectionMode();
                 return true;
             }
@@ -402,6 +406,17 @@ public class ActionModeHandler implements Callback, PopupList.OnPopupItemClickLi
         return ShareIntents.build(uris, MenuExecutor.getMimeType(type));
     }
 
+    /** Selected items whose last load had IS_FAVORITE set (albums never count). */
+    private static int countFavourites(ArrayList<MediaObject> selected) {
+        int favourites = 0;
+        for (MediaObject object : selected) {
+            if (object instanceof MediaItem && ((MediaItem) object).isFavourite()) {
+                favourites++;
+            }
+        }
+        return favourites;
+    }
+
     public void updateSupportedOperation(Path path, boolean selected) {
         // TODO: We need to improve the performance
         updateSupportedOperation();
@@ -432,6 +447,7 @@ public class ActionModeHandler implements Callback, PopupList.OnPopupItemClickLi
                             if (jc.isCancelled()) return;
                             // Disable all the operations when no item is selected
                             MenuExecutor.updateMenuOperation(mMenu, 0);
+                            mSelectionIsFavourite = false;
                         }
                     });
                     return null;
@@ -441,6 +457,8 @@ public class ActionModeHandler implements Callback, PopupList.OnPopupItemClickLi
                     return null;
                 }
                 int numSelected = selected.size();
+                final boolean allFavourite = FavouriteMenu.selectionIsFavourite(
+                        countFavourites(selected), numSelected);
                 final boolean canSharePanoramas =
                         numSelected < MAX_SELECTED_ITEMS_FOR_PANORAMA_SHARE_INTENT;
                 final boolean canShare =
@@ -467,6 +485,9 @@ public class ActionModeHandler implements Callback, PopupList.OnPopupItemClickLi
                         mMenuTask = null;
                         if (jc.isCancelled()) return;
                         MenuExecutor.updateMenuOperation(mMenu, operation);
+                        mSelectionIsFavourite = allFavourite;
+                        FavouriteMenu.apply(mMenu.findItem(R.id.action_favourite),
+                                allFavourite);
                         MenuExecutor.updateMenuForPanorama(mMenu,
                                 canSharePanoramas && supportCallback.mHasPanorama360);
                         mShareIntent = share_intent;
