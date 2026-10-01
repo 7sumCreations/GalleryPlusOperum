@@ -17,8 +17,8 @@ android {
         targetSdk = 33
         // versionCode only ever goes up (debug builds share it, and Android
         // refuses downgrades). 0.1.0 = Epic 1.
-        versionCode = 40100
-        versionName = "0.1.0"
+        versionCode = 40110
+        versionName = "0.1.1"
         ndk.abiFilters += listOf("arm64-v8a")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
