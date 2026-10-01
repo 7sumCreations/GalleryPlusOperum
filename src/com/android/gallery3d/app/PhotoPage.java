@@ -36,7 +36,6 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.RelativeLayout;
-import android.widget.ShareActionProvider;
 import android.widget.Toast;
 
 import com.android.gallery3d.R;
@@ -70,12 +69,13 @@ import com.android.gallery3d.ui.PhotoView;
 import com.android.gallery3d.ui.SelectionManager;
 import com.android.gallery3d.ui.SynchronizedHandler;
 import com.android.gallery3d.util.GalleryUtils;
+import com.android.gallery3d.util.ShareIntents;
 import com.android.gallery3d.util.UsageStatistics;
 
 import java.util.ArrayList;
 
 public abstract class PhotoPage extends ActivityState implements
-        PhotoView.Listener, AppBridge.Server, ShareActionProvider.OnShareTargetSelectedListener,
+        PhotoView.Listener, AppBridge.Server,
         PhotoPageBottomControls.Delegate, GalleryActionBar.OnAlbumModeSelectedListener {
     private static final String TAG = "PhotoPage";
 
@@ -90,7 +90,6 @@ public abstract class PhotoPage extends ActivityState implements
     private static final int MSG_REFRESH_IMAGE = 11;
     private static final int MSG_UPDATE_PHOTO_UI = 12;
     private static final int MSG_UPDATE_DEFERRED = 14;
-    private static final int MSG_UPDATE_SHARE_URI = 15;
     private static final int MSG_UPDATE_PANORAMA_UI = 16;
 
     private static final int HIDE_BARS_TIMEOUT = 3500;
@@ -203,17 +202,6 @@ public abstract class PhotoPage extends ActivityState implements
             if (mediaObject == mCurrentPhoto) {
                 mHandler.obtainMessage(MSG_REFRESH_BOTTOM_CONTROLS, isPanorama ? 1 : 0, isPanorama360 ? 1 : 0,
                         mediaObject).sendToTarget();
-            }
-        }
-    };
-
-    private final PanoramaSupportCallback mUpdateShareURICallback = new PanoramaSupportCallback() {
-        @Override
-        public void panoramaInfoAvailable(MediaObject mediaObject, boolean isPanorama,
-                boolean isPanorama360) {
-            if (mediaObject == mCurrentPhoto) {
-                mHandler.obtainMessage(MSG_UPDATE_SHARE_URI, isPanorama360 ? 1 : 0, 0, mediaObject)
-                        .sendToTarget();
             }
         }
     };
@@ -350,20 +338,6 @@ public abstract class PhotoPage extends ActivityState implements
                     }
                     case MSG_UPDATE_PHOTO_UI: {
                         updateUIForCurrentPhoto();
-                        break;
-                    }
-                    case MSG_UPDATE_SHARE_URI: {
-                        if (mCurrentPhoto == message.obj) {
-                            boolean isPanorama360 = message.arg1 != 0;
-                            Uri contentUri = mCurrentPhoto.getContentUri();
-                            Intent panoramaIntent = null;
-                            if (isPanorama360) {
-                                panoramaIntent = createSharePanoramaIntent(contentUri);
-                            }
-                            Intent shareIntent = createShareIntent(mCurrentPhoto);
-
-                            mActionBar.setShareIntents(panoramaIntent, shareIntent, PhotoPage.this);
-                        }
                         break;
                     }
                     case MSG_UPDATE_PANORAMA_UI: {
@@ -614,19 +588,14 @@ public abstract class PhotoPage extends ActivityState implements
         }
     }
 
-    private static Intent createShareIntent(MediaObject mediaObject) {
-        int type = mediaObject.getMediaType();
-        return new Intent(Intent.ACTION_SEND)
-                .setType(MenuExecutor.getMimeType(type))
-                .putExtra(Intent.EXTRA_STREAM, mediaObject.getContentUri())
-                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-    }
-
-    private static Intent createSharePanoramaIntent(Uri contentUri) {
-        return new Intent(Intent.ACTION_SEND)
-                .setType(GalleryUtils.MIME_TYPE_PANORAMA360)
-                .putExtra(Intent.EXTRA_STREAM, contentUri)
-                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+    private void shareCurrentPhoto(MediaItem current) {
+        if (mSecureAlbum != null
+                || (current.getSupportedOperations() & MediaObject.SUPPORT_SHARE) == 0) {
+            return;
+        }
+        // One item: building the intent is cheap, so do it on the click.
+        ShareIntents.launchChooser((Activity) mActivity, ShareIntents.build(
+                current.getContentUri(), MenuExecutor.getMimeType(current.getMediaType())));
     }
 
     private void overrideTransitionToEditor() {
@@ -719,10 +688,6 @@ public abstract class PhotoPage extends ActivityState implements
         refreshBottomControlsWhenReady();
         if (mShowDetails) {
             mDetailsHelper.reloadDetails();
-        }
-        if ((mSecureAlbum == null)
-                && (mCurrentPhoto.getSupportedOperations() & MediaItem.SUPPORT_SHARE) != 0) {
-            mCurrentPhoto.getPanoramaSupport(mUpdateShareURICallback);
         }
     }
 
@@ -1009,6 +974,10 @@ public abstract class PhotoPage extends ActivityState implements
         switch (action) {
             case android.R.id.home: {
                 onUpPressed();
+                return true;
+            }
+            case R.id.action_share: {
+                shareCurrentPhoto(current);
                 return true;
             }
             case R.id.action_slideshow: {
@@ -1577,7 +1546,7 @@ public abstract class PhotoPage extends ActivityState implements
             return;
         }
 
-        MenuExecutor.updateMenuForPanorama(menu, isPanorama360, isPanorama360);
+        MenuExecutor.updateMenuForPanorama(menu, isPanorama360);
 
         if (isPanorama360) {
             MenuItem item = menu.findItem(R.id.action_share);
@@ -1597,29 +1566,6 @@ public abstract class PhotoPage extends ActivityState implements
     @Override
     public void onUndoBarVisibilityChanged(boolean visible) {
         refreshBottomControlsWhenReady();
-    }
-
-    @Override
-    public boolean onShareTargetSelected(ShareActionProvider source, Intent intent) {
-        final long timestampMillis = mCurrentPhoto.getDateInMs();
-        final String mediaType = getMediaTypeString(mCurrentPhoto);
-        UsageStatistics.onEvent(UsageStatistics.COMPONENT_GALLERY,
-                UsageStatistics.ACTION_SHARE,
-                mediaType,
-                        timestampMillis > 0
-                        ? System.currentTimeMillis() - timestampMillis
-                        : -1);
-        return false;
-    }
-
-    private static String getMediaTypeString(MediaItem item) {
-        if (item.getMediaType() == MediaObject.MEDIA_TYPE_VIDEO) {
-            return "Video";
-        } else if (item.getMediaType() == MediaObject.MEDIA_TYPE_IMAGE) {
-            return "Photo";
-        } else {
-            return "Unknown:" + item.getMediaType();
-        }
     }
 
 }

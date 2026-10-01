@@ -40,11 +40,11 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
-import android.widget.ShareActionProvider;
 
 import com.android.gallery3d.R;
 import com.android.gallery3d.common.ApiHelper;
 import com.android.gallery3d.common.Utils;
+import com.android.gallery3d.util.ShareIntents;
 
 /**
  * This activity plays a video from a specified URI.
@@ -179,8 +179,6 @@ public class MovieActivity extends Activity {
         MenuItem shareItem = menu.findItem(R.id.action_share);
         if (ContentResolver.SCHEME_CONTENT.equals(mUri.getScheme())) {
             shareItem.setVisible(true);
-            ((ShareActionProvider) shareItem.getActionProvider())
-                    .setShareIntent(createShareIntent());
         } else {
             shareItem.setVisible(false);
         }
@@ -188,10 +186,7 @@ public class MovieActivity extends Activity {
     }
 
     private Intent createShareIntent() {
-        Intent intent = new Intent(Intent.ACTION_SEND);
-        intent.setType("video/*");
-        intent.putExtra(Intent.EXTRA_STREAM, mUri);
-        return intent;
+        return ShareIntents.build(mUri, "video/*");
     }
 
     @Override
@@ -206,8 +201,7 @@ public class MovieActivity extends Activity {
             }
             return true;
         } else if (id == R.id.action_share) {
-            startActivity(Intent.createChooser(createShareIntent(),
-                    getString(R.string.share)));
+            ShareIntents.launchChooser(this, createShareIntent());
             return true;
         }
         return false;

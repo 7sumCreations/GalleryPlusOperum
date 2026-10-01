@@ -32,7 +32,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
-import android.widget.ShareActionProvider;
 import android.widget.TextView;
 import android.widget.TwoLineListItem;
 
@@ -390,49 +389,15 @@ public class GalleryActionBar implements OnNavigationListener {
     }
 
     private Menu mActionBarMenu;
-    private ShareActionProvider mSharePanoramaActionProvider;
-    private ShareActionProvider mShareActionProvider;
-    private Intent mSharePanoramaIntent;
-    private Intent mShareIntent;
 
+    // Share is a plain menu item handled by the page (PhotoPage), which opens
+    // the system share sheet; no ShareActionProvider wiring lives here.
     public void createActionBarMenu(int menuRes, Menu menu) {
         mActivity.getMenuInflater().inflate(menuRes, menu);
         mActionBarMenu = menu;
-
-        MenuItem item = menu.findItem(R.id.action_share_panorama);
-        if (item != null) {
-            mSharePanoramaActionProvider = (ShareActionProvider)
-                item.getActionProvider();
-            mSharePanoramaActionProvider
-                .setShareHistoryFileName("panorama_share_history.xml");
-            mSharePanoramaActionProvider.setShareIntent(mSharePanoramaIntent);
-        }
-
-        item = menu.findItem(R.id.action_share);
-        if (item != null) {
-            mShareActionProvider = (ShareActionProvider)
-                item.getActionProvider();
-            mShareActionProvider
-                .setShareHistoryFileName("share_history.xml");
-            mShareActionProvider.setShareIntent(mShareIntent);
-        }
     }
 
     public Menu getMenu() {
         return mActionBarMenu;
-    }
-
-    public void setShareIntents(Intent sharePanoramaIntent, Intent shareIntent,
-        ShareActionProvider.OnShareTargetSelectedListener onShareListener) {
-        mSharePanoramaIntent = sharePanoramaIntent;
-        if (mSharePanoramaActionProvider != null) {
-            mSharePanoramaActionProvider.setShareIntent(sharePanoramaIntent);
-        }
-        mShareIntent = shareIntent;
-        if (mShareActionProvider != null) {
-            mShareActionProvider.setShareIntent(shareIntent);
-            mShareActionProvider.setOnShareTargetSelectedListener(
-                onShareListener);
-        }
     }
 }
