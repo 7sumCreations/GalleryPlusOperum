@@ -6,6 +6,8 @@ import android.net.Uri;
 import android.provider.MediaStore;
 import android.util.Log;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Locale;
 
 /**
@@ -70,6 +72,40 @@ public final class IncomingUris {
         }
         String bare = stripUserId(authority);
         return MediaStore.AUTHORITY.equals(bare);
+    }
+
+    /**
+     * True for a {@code file:} uri whose real (symlink-resolved) path lies in
+     * shared storage under {@code /storage/}. Never true for this app's
+     * private directories, which live under {@code /data/}.
+     */
+    public static boolean isSharedStorageFile(Uri uri) {
+        if (uri == null || uri.getScheme() == null
+                || !"file".equals(uri.getScheme().toLowerCase(Locale.ROOT))) {
+            return false;
+        }
+        return isSharedStoragePath(canonical(uri.getPath()));
+    }
+
+    /**
+     * The string form of {@link #isSharedStorageFile(Uri)}, on a canonical
+     * path. App-specific external directories ({@code Android/data},
+     * {@code Android/obb}) are excluded: this app's own one is private data.
+     */
+    public static boolean isSharedStoragePath(String canonicalPath) {
+        if (canonicalPath == null || !canonicalPath.startsWith("/storage/")) return false;
+        String lower = canonicalPath.toLowerCase(Locale.ROOT);
+        return !lower.contains("/android/data/") && !lower.contains("/android/obb/")
+                && !lower.endsWith("/android/data") && !lower.endsWith("/android/obb");
+    }
+
+    private static String canonical(String path) {
+        if (path == null || path.isEmpty()) return null;
+        try {
+            return new File(path).getCanonicalPath();
+        } catch (IOException | RuntimeException e) {
+            return null;
+        }
     }
 
     /**

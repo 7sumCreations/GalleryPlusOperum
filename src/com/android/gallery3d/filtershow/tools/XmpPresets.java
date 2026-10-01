@@ -98,6 +98,9 @@ public class XmpPresets {
             is = context.getContentResolver().openInputStream(uriToEdit);
             xmpMeta = XmpUtilHelper.extractXMPMeta(is);
         } catch (FileNotFoundException e) {
+        } catch (RuntimeException e) {
+            // SecurityException / IllegalArgumentException from the provider.
+            Log.w(LOGTAG, "cannot read XMP from " + uriToEdit, e);
         } finally {
             Utils.closeSilently(is);
         }

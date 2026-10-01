@@ -117,6 +117,7 @@ import com.android.gallery3d.filtershow.tools.XmpPresets.XMresults;
 import com.android.gallery3d.filtershow.ui.ExportDialog;
 import com.android.gallery3d.filtershow.ui.FramedTextButton;
 import com.android.gallery3d.util.GalleryUtils;
+import com.android.gallery3d.util.IncomingUris;
 import com.android.photos.data.GalleryBitmapPool;
 
 import java.io.File;
@@ -264,6 +265,15 @@ public class FilterShowActivity extends FragmentActivity implements OnItemClickL
 
         fillCategories();
         loadMainPanel();
+        Uri requested = getIntent().getData();
+        if (requested != null && !IncomingUris.isForeignContent(this, requested)) {
+            // EDIT is exported and explicit intents skip the manifest filter:
+            // never load (and later save next to, or rename) a file: path or
+            // this app's own provider data for another app.
+            Log.w(LOGTAG, "refusing to edit " + requested);
+            cannotLoadImage();
+            return;
+        }
         extractXMPData();
         processIntent();
     }
@@ -899,7 +909,7 @@ public class FilterShowActivity extends FragmentActivity implements OnItemClickL
         if (mLoadBitmapTask != null) {
             mLoadBitmapTask.cancel(false);
         }
-        mUserPresetsManager.close();
+        if (mUserPresetsManager != null) mUserPresetsManager.close();
         doUnbindService();
         super.onDestroy();
     }
@@ -1389,7 +1399,11 @@ public class FilterShowActivity extends FragmentActivity implements OnItemClickL
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (resultCode == RESULT_OK) {
             if (requestCode == SELECT_PICTURE) {
-                Uri selectedImageUri = data.getData();
+                Uri selectedImageUri = data == null ? null : data.getData();
+                if (!IncomingUris.isForeignContent(this, selectedImageUri)) {
+                    cannotLoadImage();
+                    return;
+                }
                 startLoadBitmap(selectedImageUri);
             }
         }
@@ -1419,10 +1433,19 @@ public class FilterShowActivity extends FragmentActivity implements OnItemClickL
     }
 
     private void extractXMPData() {
-        XMresults res = XmpPresets.extractXMPData(
-                getBaseContext(), mPrimaryImage, getIntent().getData());
+        Uri data = getIntent().getData();
+        if (data == null) return;
+        XMresults res = XmpPresets.extractXMPData(getBaseContext(), mPrimaryImage, data);
         if (res == null)
             return;
+        // The "original" is a uri stored inside the image's own XMP, so any
+        // image can name any path. Follow it only to another app's content
+        // or to a file in shared storage (this editor's own .aux backups).
+        if (!IncomingUris.isForeignContent(this, res.originalimage)
+                && !IncomingUris.isSharedStorageFile(res.originalimage)) {
+            Log.w(LOGTAG, "ignoring XMP original " + res.originalimage);
+            return;
+        }
 
         mOriginalImageUri = res.originalimage;
         mOriginalPreset = res.preset;

@@ -63,4 +63,17 @@ public class IncomingUrisTest {
         assertEquals("media", IncomingUris.stripUserId("0@media"));
         assertEquals("media", IncomingUris.stripUserId("media"));
     }
+
+    @Test
+    public void onlySharedStoragePathsCountAsSharedFiles() {
+        assertTrue(IncomingUris.isSharedStoragePath("/storage/emulated/0/DCIM/.aux/IMG_1.jpg"));
+        assertTrue(IncomingUris.isSharedStoragePath("/storage/1234-ABCD/Pictures/a.jpg"));
+        assertFalse(IncomingUris.isSharedStoragePath("/data/user/0/" + OWN + "/shared_prefs/x.xml"));
+        assertFalse(IncomingUris.isSharedStoragePath("/data/data/" + OWN + "/files/a.jpg"));
+        assertFalse(IncomingUris.isSharedStoragePath(
+                "/storage/emulated/0/Android/data/" + OWN + "/cache/a.jpg"));
+        assertFalse(IncomingUris.isSharedStoragePath("/storage/emulated/0/Android/obb/x"));
+        assertFalse(IncomingUris.isSharedStoragePath("/storagex/a.jpg"));
+        assertFalse(IncomingUris.isSharedStoragePath(null));
+    }
 }

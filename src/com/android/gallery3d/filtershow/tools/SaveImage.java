@@ -41,6 +41,7 @@ import com.android.gallery3d.filtershow.imageshow.PrimaryImage;
 import com.android.gallery3d.filtershow.pipeline.CachingPipeline;
 import com.android.gallery3d.filtershow.pipeline.ImagePreset;
 import com.android.gallery3d.filtershow.pipeline.ProcessingService;
+import com.android.gallery3d.util.IncomingUris;
 import com.android.gallery3d.util.XmpUtilHelper;
 
 import java.io.File;
@@ -295,9 +296,10 @@ public class SaveImage {
             // destination file.
             File srcFile = getLocalFileFromUri(mContext, mSourceUri);
             // If the source is not a local file, then skip this renaming and
-            // create a local copy as usual.
-            if (srcFile != null) {
-                srcFile.renameTo(mDestinationFile);
+            // create a local copy as usual. If the rename fails (another
+            // app's file under scoped storage), do the same rather than
+            // linking a destination file that was never written.
+            if (srcFile != null && srcFile.renameTo(mDestinationFile)) {
                 uri = SaveImage.linkNewFileToUri(mContext, mSelectedImageUri,
                         mDestinationFile, System.currentTimeMillis(), doAuxBackup);
             }
@@ -609,7 +611,7 @@ public class SaveImage {
         // sourceUri can be a file path or a content Uri, it need to be handled
         // differently.
         if (scheme.equals(ContentResolver.SCHEME_CONTENT)) {
-            if (srcUri.getAuthority().equals(MediaStore.AUTHORITY)) {
+            if (MediaStore.AUTHORITY.equals(srcUri.getAuthority())) {
                 querySource(context, srcUri, new String[] {
                         ImageColumns.DATA
                 },
@@ -622,7 +624,12 @@ public class SaveImage {
                         });
             }
         } else if (scheme.equals(ContentResolver.SCHEME_FILE)) {
-            file[0] = new File(srcUri.getPath());
+            // Only shared storage (e.g. this editor's .aux backups). A file:
+            // uri can come from an image's own XMP, and the callers rename
+            // the file it names, so never hand back an app-private path.
+            if (IncomingUris.isSharedStorageFile(srcUri)) {
+                file[0] = new File(srcUri.getPath());
+            }
         }
         return file[0];
     }
