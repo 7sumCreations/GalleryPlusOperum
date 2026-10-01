@@ -257,7 +257,13 @@ public class MenuExecutor {
             case R.id.action_crop: {
                 Intent intent = getIntentBySingleSelectedPath(CropActivity.CROP_ACTION);
                 if (intent == null) return;
-                ((Activity) mActivity).startActivity(intent);
+                // CropActivity is not exported: name it, never resolve it.
+                intent.setClass((Activity) mActivity, CropActivity.class);
+                try {
+                    ((Activity) mActivity).startActivity(intent);
+                } catch (RuntimeException e) {
+                    Log.w(TAG, "could not start crop", e);
+                }
                 return;
             }
             case R.id.action_edit: {

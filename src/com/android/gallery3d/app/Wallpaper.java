@@ -30,6 +30,7 @@ import android.view.Display;
 import com.android.gallery3d.common.ApiHelper;
 import com.android.gallery3d.filtershow.crop.CropActivity;
 import com.android.gallery3d.filtershow.crop.CropExtras;
+import com.android.gallery3d.util.IncomingUris;
 
 import java.lang.IllegalArgumentException;
 
@@ -88,6 +89,11 @@ public class Wallpaper extends Activity {
         switch (mState) {
             case STATE_INIT: {
                 mPickedItem = intent.getData();
+                // SET_WALLPAPER is exported: take only another app's content
+                // uri as the photo, never a file: path or this app's own data.
+                if (!IncomingUris.isForeignContent(this, mPickedItem)) {
+                    mPickedItem = null;
+                }
                 if (mPickedItem == null) {
                     Intent request = new Intent(Intent.ACTION_GET_CONTENT)
                             .setClass(this, DialogPicker.class)
@@ -147,7 +153,11 @@ public class Wallpaper extends Activity {
         }
         mState = requestCode;
         if (mState == STATE_PHOTO_PICKED) {
-            mPickedItem = data.getData();
+            mPickedItem = data == null ? null : data.getData();
+            if (mPickedItem == null) {
+                finish();
+                return;
+            }
         }
 
         // onResume() would be called next

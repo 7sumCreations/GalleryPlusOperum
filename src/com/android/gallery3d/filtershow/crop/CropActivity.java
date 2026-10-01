@@ -39,13 +39,13 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.view.WindowManager;
 import android.widget.Toast;
 
 import com.android.gallery3d.R;
 import com.android.gallery3d.common.Utils;
 import com.android.gallery3d.filtershow.cache.ImageLoader;
 import com.android.gallery3d.filtershow.tools.SaveImage;
+import com.android.gallery3d.util.IncomingUris;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -98,9 +98,8 @@ public class CropActivity extends Activity {
         Intent intent = getIntent();
         setResult(RESULT_CANCELED, new Intent());
         mCropExtras = getExtrasFromIntent(intent);
-        if (mCropExtras != null && mCropExtras.getShowWhenLocked()) {
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED);
-        }
+        // Not honoured: showing over the lock screen is never asked for by
+        // this app's own callers (the activity is not exported).
 
         setContentView(R.layout.crop_activity);
         mCropView = (CropView) findViewById(R.id.cropView);
@@ -120,6 +119,12 @@ public class CropActivity extends Activity {
         }
         if (intent.getData() != null) {
             mSourceUri = intent.getData();
+            if (!IncomingUris.isForeignContent(this, mSourceUri)) {
+                // Only content uris from other providers (MediaStore,
+                // documents); never file: or this app's own data.
+                Log.w(LOGTAG, "refusing to crop " + mSourceUri);
+                mSourceUri = null;
+            }
             startLoadBitmap(mSourceUri);
         } else {
             pickImage();
@@ -164,8 +169,11 @@ public class CropActivity extends Activity {
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (resultCode == RESULT_OK && requestCode == SELECT_PICTURE) {
-            mSourceUri = data.getData();
+            Uri picked = data == null ? null : data.getData();
+            mSourceUri = IncomingUris.isForeignContent(this, picked) ? picked : null;
             startLoadBitmap(mSourceUri);
+        } else if (requestCode == SELECT_PICTURE) {
+            done();
         }
     }
 
@@ -288,6 +296,11 @@ public class CropActivity extends Activity {
         if (mOriginalBitmap != null && mCropExtras != null) {
             if (mCropExtras.getExtraOutput() != null) {
                 destinationUri = mCropExtras.getExtraOutput();
+                if (!IncomingUris.isForeignContent(this, destinationUri)) {
+                    // Never write over a file: path or this app's own data.
+                    Log.w(LOGTAG, "ignoring output uri " + destinationUri);
+                    destinationUri = null;
+                }
                 if (destinationUri != null) {
                     flags |= DO_EXTRA_OUTPUT;
                 }

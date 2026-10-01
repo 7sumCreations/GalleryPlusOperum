@@ -329,6 +329,7 @@ public class AlbumPage extends ActivityState implements GalleryActionBar.Cluster
         if (mData.getString(GalleryActivity.EXTRA_CROP) != null) {
             Uri uri = dm.getContentUri(item.getPath());
             Intent intent = new Intent(CropActivity.CROP_ACTION, uri)
+                    .setClass(activity, CropActivity.class)
                     .addFlags(Intent.FLAG_ACTIVITY_FORWARD_RESULT)
                     .putExtras(getData());
             if (mData.getParcelable(MediaStore.EXTRA_OUTPUT) == null) {
