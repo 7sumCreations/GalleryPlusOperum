@@ -36,10 +36,18 @@ public class DisableCameraReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        // Disable camera-related activities if there is no camera.
-        boolean needCameraActivity = CHECK_BACK_CAMERA_ONLY
-            ? hasBackCamera()
-            : hasCamera();
+        // Disable camera-related activities if there is no camera. The
+        // camera queries need no CAMERA permission, but the camera service
+        // can throw; a boot receiver must never crash the process.
+        boolean needCameraActivity;
+        try {
+            needCameraActivity = CHECK_BACK_CAMERA_ONLY
+                ? hasBackCamera()
+                : hasCamera();
+        } catch (RuntimeException e) {
+            Log.w(TAG, "camera query failed; leaving the shortcut enabled", e);
+            return;
+        }
 
         if (!needCameraActivity) {
             Log.i(TAG, "disable all camera activities");
