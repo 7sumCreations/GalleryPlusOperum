@@ -20,9 +20,6 @@ import android.content.Context;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
-import android.location.LocationManager;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 
 import com.android.gallery3d.common.BlobCache;
 
@@ -72,8 +69,6 @@ public class ReverseGeocoder {
     private Context mContext;
     private Geocoder mGeocoder;
     private BlobCache mGeoCache;
-    private ConnectivityManager mConnectivityManager;
-    private static Address sCurrentAddress; // last known address
 
     public ReverseGeocoder(Context context) {
         mContext = context;
@@ -81,8 +76,6 @@ public class ReverseGeocoder {
         mGeoCache = CacheManager.getCache(context, GEO_CACHE_FILE,
                 GEO_CACHE_MAX_ENTRIES, GEO_CACHE_MAX_BYTES,
                 GEO_CACHE_VERSION);
-        mConnectivityManager = (ConnectivityManager)
-                context.getSystemService(Context.CONNECTIVITY_SERVICE);
     }
 
     public String computeAddress(SetLatLong set) {
@@ -108,35 +101,13 @@ public class ReverseGeocoder {
             return null;
         }
 
-        // Get current location, we decide the granularity of the string based
-        // on this.
-        LocationManager locationManager =
-                (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
-        Location location = null;
-        List<String> providers = locationManager.getAllProviders();
-        for (int i = 0; i < providers.size(); ++i) {
-            String provider = providers.get(i);
-            location = (provider != null) ? locationManager.getLastKnownLocation(provider) : null;
-            if (location != null)
-                break;
-        }
+        // AOSP read the phone's last known location here to pick how detailed
+        // the name should be. This fork holds no location permission (and the
+        // call threw SecurityException without it), so names are always
+        // relative to the device locale's country.
         String currentCity = "";
         String currentAdminArea = "";
         String currentCountry = Locale.getDefault().getCountry();
-        if (location != null) {
-            Address currentAddress = lookupAddress(
-                    location.getLatitude(), location.getLongitude(), true);
-            if (currentAddress == null) {
-                currentAddress = sCurrentAddress;
-            } else {
-                sCurrentAddress = currentAddress;
-            }
-            if (currentAddress != null && currentAddress.getCountryCode() != null) {
-                currentCity = checkNull(currentAddress.getLocality());
-                currentCountry = checkNull(currentAddress.getCountryCode());
-                currentAdminArea = checkNull(currentAddress.getAdminArea());
-            }
-        }
 
         String closestCommonLocation = null;
         String addr1Locality = checkNull(addr1.getLocality());
@@ -312,9 +283,10 @@ public class ReverseGeocoder {
                 cachedLocation = mGeoCache.lookup(locationKey);
             }
             Address address = null;
-            NetworkInfo networkInfo = mConnectivityManager.getActiveNetworkInfo();
             if (cachedLocation == null || cachedLocation.length == 0) {
-                if (networkInfo == null || !networkInfo.isConnected()) {
+                // No ACCESS_NETWORK_STATE: rely on the platform geocoder being
+                // present. With no network it throws IOException, caught below.
+                if (!Geocoder.isPresent()) {
                     return null;
                 }
                 List<Address> addresses = mGeocoder.getFromLocation(latitude, longitude, 1);
