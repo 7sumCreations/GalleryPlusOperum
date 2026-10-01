@@ -27,6 +27,8 @@ On top of the classic AOSP gallery (albums, viewer, slideshow, editor, crop, vid
 - **Undo** for the last operation.
 - **Auto-file:** optionally files new camera photos into `Pictures/YYYY/MM` after a delay you choose. It only ever touches photos taken after you switch it on.
 
+What's coming next — fast filing, export, an encrypted vault and more — is in the [roadmap](ROADMAP.md).
+
 ## Building
 
 The upstream sources build inside the AOSP tree (`Android.bp`). This fork also carries a standalone Gradle/CMake harness:
