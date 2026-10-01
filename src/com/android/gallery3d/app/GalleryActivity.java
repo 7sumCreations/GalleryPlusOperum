@@ -27,7 +27,6 @@ import android.view.InputDevice;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
-import android.view.WindowManager;
 import android.widget.Toast;
 
 import com.android.gallery3d.R;
@@ -49,6 +48,7 @@ public final class GalleryActivity extends AbstractGalleryActivity implements On
     public static final String KEY_GET_ALBUM = "get-album";
     public static final String KEY_TYPE_BITS = "type-bits";
     public static final String KEY_MEDIA_TYPES = "mediaTypes";
+    /** No longer honoured: any app could set it on this exported activity. */
     public static final String KEY_DISMISS_KEYGUARD = "dismiss-keyguard";
 
     private static final String TAG = "GalleryActivity";
@@ -61,11 +61,6 @@ public final class GalleryActivity extends AbstractGalleryActivity implements On
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_ACTION_BAR);
         requestWindowFeature(Window.FEATURE_ACTION_BAR_OVERLAY);
-
-        if (getIntent().getBooleanExtra(KEY_DISMISS_KEYGUARD, false)) {
-            getWindow().addFlags(
-                    WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD);
-        }
 
         setContentView(R.layout.main);
         createMediaAccessGate(savedInstanceState);
@@ -115,9 +110,12 @@ public final class GalleryActivity extends AbstractGalleryActivity implements On
     }
 
     private void startGetContent(Intent intent) {
-        Bundle data = intent.getExtras() != null
-                ? new Bundle(intent.getExtras())
-                : new Bundle();
+        // Build the page state from scratch. The caller's extras used to be
+        // copied in wholesale, which let any app set internal page keys
+        // (auto-select-all, get-album, crop + output uri, show-when-locked).
+        // A picker only needs the type, which determineTypeBits reads from
+        // the intent itself (MIME type and EXTRA_LOCAL_ONLY).
+        Bundle data = new Bundle();
         data.putBoolean(KEY_GET_CONTENT, true);
         int typeBits = GalleryUtils.determineTypeBits(this, intent);
         data.putInt(KEY_TYPE_BITS, typeBits);
