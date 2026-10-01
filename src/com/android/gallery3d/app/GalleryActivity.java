@@ -37,6 +37,7 @@ import com.android.gallery3d.data.MediaSet;
 import com.android.gallery3d.data.Path;
 import com.android.gallery3d.picasasource.PicasaSource;
 import com.android.gallery3d.util.GalleryUtils;
+import com.android.gallery3d.util.IncomingUris;
 
 public final class GalleryActivity extends AbstractGalleryActivity implements OnCancelListener {
     public static final String EXTRA_SLIDESHOW = "slideshow";
@@ -141,6 +142,16 @@ public final class GalleryActivity extends AbstractGalleryActivity implements On
     }
 
     private void startViewAction(Intent intent) {
+        Uri data = intent.getData();
+        if (data != null && !IncomingUris.isForeignContent(this, data)) {
+            // Explicit intents skip the manifest filters, so check here too:
+            // never open a file: path or this app's own provider data for
+            // another app (it could then be shared on from the viewer).
+            Log.w(TAG, "refusing to view " + data);
+            Toast.makeText(this, R.string.no_such_item, Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
         Boolean slideshow = intent.getBooleanExtra(EXTRA_SLIDESHOW, false);
         if (slideshow) {
             getActionBar().hide();
@@ -204,6 +215,12 @@ public final class GalleryActivity extends AbstractGalleryActivity implements On
                 }
             } else {
                 Path itemPath = dm.findPathByUri(uri, contentType);
+                if (itemPath == null) {
+                    Toast.makeText(this,
+                            R.string.no_such_item, Toast.LENGTH_LONG).show();
+                    finish();
+                    return;
+                }
                 Path albumPath = dm.getDefaultSetOf(itemPath);
 
                 data.putString(PhotoPage.KEY_MEDIA_ITEM_PATH, itemPath.toString());

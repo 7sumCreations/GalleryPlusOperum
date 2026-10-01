@@ -20,7 +20,6 @@ import android.annotation.TargetApi;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.content.AsyncQueryHandler;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
@@ -40,10 +39,12 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.Toast;
 
 import com.android.gallery3d.R;
 import com.android.gallery3d.common.ApiHelper;
 import com.android.gallery3d.common.Utils;
+import com.android.gallery3d.util.IncomingUris;
 import com.android.gallery3d.util.ShareIntents;
 
 /**
@@ -77,6 +78,17 @@ public class MovieActivity extends Activity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Only another app's content uri (MediaStore, Files, ...). No uri at
+        // all used to crash; file: paths and this app's own provider data are
+        // refused because explicit intents bypass the manifest filter.
+        Uri data = getIntent().getData();
+        if (!IncomingUris.isForeignContent(this, data)) {
+            Log.w(TAG, "refusing to play " + data);
+            Toast.makeText(this, R.string.video_err, Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
 
         requestWindowFeature(Window.FEATURE_ACTION_BAR);
         requestWindowFeature(Window.FEATURE_ACTION_BAR_OVERLAY);
@@ -174,10 +186,10 @@ public class MovieActivity extends Activity {
         super.onCreateOptionsMenu(menu);
         getMenuInflater().inflate(R.menu.movie, menu);
 
-        // Document says EXTRA_STREAM should be a content: Uri
-        // So, we only share the video if it's "content:".
+        // Share only MediaStore videos. Re-sharing any other content uri
+        // would pass on a read grant this app was merely given for playback.
         MenuItem shareItem = menu.findItem(R.id.action_share);
-        if (ContentResolver.SCHEME_CONTENT.equals(mUri.getScheme())) {
+        if (IncomingUris.isMediaStore(mUri)) {
             shareItem.setVisible(true);
         } else {
             shareItem.setVisible(false);
@@ -201,6 +213,7 @@ public class MovieActivity extends Activity {
             }
             return true;
         } else if (id == R.id.action_share) {
+            if (!IncomingUris.isMediaStore(mUri)) return true;
             ShareIntents.launchChooser(this, createShareIntent());
             return true;
         }
@@ -213,6 +226,7 @@ public class MovieActivity extends Activity {
                 .requestAudioFocus(null, AudioManager.STREAM_MUSIC,
                 AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
         super.onStart();
+        if (mPlayer == null) return;
 
         PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         mWakeLock = pm.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK,"Gallery_WAKE_LOCK");
@@ -226,43 +240,43 @@ public class MovieActivity extends Activity {
                 .abandonAudioFocus(null);
         super.onStop();
 
-        mWakeLock.release();
+        if (mWakeLock != null && mWakeLock.isHeld()) mWakeLock.release();
 
     }
 
     @Override
     public void onPause() {
-        mPlayer.onPause();
+        if (mPlayer != null) mPlayer.onPause();
         super.onPause();
     }
 
     @Override
     public void onResume() {
-        mPlayer.onResume();
+        if (mPlayer != null) mPlayer.onResume();
         super.onResume();
     }
 
     @Override
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        mPlayer.onSaveInstanceState(outState);
+        if (mPlayer != null) mPlayer.onSaveInstanceState(outState);
     }
 
     @Override
     public void onDestroy() {
-        mPlayer.onDestroy();
+        if (mPlayer != null) mPlayer.onDestroy();
         super.onDestroy();
     }
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        return mPlayer.onKeyDown(keyCode, event)
+        return (mPlayer != null && mPlayer.onKeyDown(keyCode, event))
                 || super.onKeyDown(keyCode, event);
     }
 
     @Override
     public boolean onKeyUp(int keyCode, KeyEvent event) {
-        return mPlayer.onKeyUp(keyCode, event)
+        return (mPlayer != null && mPlayer.onKeyUp(keyCode, event))
                 || super.onKeyUp(keyCode, event);
     }
 }
