@@ -2,7 +2,7 @@
 
 Where GrapheneGalleryFunctio is going. Work is planned in epics; each one ships only after it has been verified by hand on a real GrapheneOS phone. Every feature on this list follows the same ground rules: no internet access, no accounts, nothing leaves the device unless you send it, and anything automatic is opt-in.
 
-Status key: ✅ done · 🔨 next · 💭 later (planned, not yet scheduled)
+Status key: ✅ done · 🔨 next · 💭 later (planned, not yet scheduled). Epics are listed in build order.
 
 ## ✅ Epic 1 · File by hand + auto-file
 
@@ -36,48 +36,63 @@ Make filing fast, get photos off the phone on your terms, and tidy the grid.
 
 Folders that live encrypted at rest inside the app's own private storage, unlocked with biometrics or a passphrase, and invisible to every other app — even apps that hold full photo permission. Items leave the vault only when you share them.
 
-## 💭 Later
+## 💭 Epic 3 · Safer batches & folder care
 
-**Trash**
+Make big batches and folder housekeeping safe.
+
+- Name-collision choices (skip / replace / keep both), asked once per batch
+- Resume or roll back an interrupted batch
+- Lock a folder against move / delete
+- Empty-folder handling
+- Folder sizes and a "biggest folders" view
 - Choose how long Trash keeps items (e.g. 10 / 20 / 30 days)
 
-**Metadata and timeline**
+## 💭 Epic 4 · Works with other apps + accessibility
+
+File a photo from wherever you see it, and make filing usable for everyone.
+
+- "Move to" and "Copy to" a folder straight from the share sheet inside the gallery
+- "Save to folder" as a share target from other apps
+- Open a folder in your file manager, and open a folder from it in the gallery
+- Accessible picker and multi-select (TalkBack, large text)
+
+## 💭 Epic 5 · Metadata & timeline
+
 - On-device EXIF index
 - EXIF panel: view, add, edit, and strip location
 - Per-folder sort and filter
 - Timeline with date headers and a scrubber
+- Picking a date for photos with none
 
-**Bulk filing**
+## 💭 Epic 6 · Bulk filing
+
 - Sort a folder into sub-folders by pattern
 - Batch rename by pattern
 - Operation history screen
 
-**Search and tags**
+## 💭 Epic 7 · Search & tags
+
 - Search across names, places and dates
 - Tags and ratings written into the files themselves (XMP)
 - Smart folders (saved searches)
 
-**Automation**
-- Choose which folders auto-file watches
-- A "not auto-filed" view
-- A gentle "file this" nudge for new photos
+## 💭 Epic 8 · On-device intelligence
 
-**Export and backup**
-- Checksum manifest with every export
-- One-way backup to a server you own, with per-folder backup status
+Opt-in, and never leaves the phone.
 
-**On-device intelligence** (opt-in, never leaves the phone)
 - Scene and object labels
 - People (faces)
 - Duplicate and blurry-photo clean-up review
 
-**Under consideration**
-- Name-collision choices (skip / replace / keep both)
-- Resume or roll back an interrupted batch
-- Lock a folder against move / delete
-- Empty-folder handling
-- "Save to folder" as a share target from other apps
-- Accessible picker and multi-select (TalkBack, large text)
-- Folder sizes and a "biggest folders" view
-- Picking a date for photos with none
+## 💭 Epic 9 · Smarter auto-file
+
+- Choose which folders auto-file watches
+- A "not auto-filed" view
+- A gentle "file this" nudge for new photos
+- A filing stats card
+
+## 💭 Epic 10 · Backup & sync
+
+- Checksum manifest with every export
+- One-way backup to a server you own, with per-folder backup status
 - Backup and restore of the app's own settings
