@@ -51,8 +51,19 @@ public class GalleryAppImpl extends Application implements GalleryApp {
         WidgetUtils.initialize(this);
         PicasaSource.initialize(this);
         UsageStatistics.initialize(this);
-        com.android.gallery3d.fileops.TrashPurgeReceiver.schedule(this);
-        com.android.gallery3d.fileops.AutoFileReceiver.schedule(this);
+        // Background housekeeping must never stop the app from launching:
+        // Application.onCreate runs on every process start (icon, alarm, boot),
+        // so a throw here is a crash loop the user cannot escape.
+        try {
+            com.android.gallery3d.fileops.TrashPurgeReceiver.schedule(this);
+        } catch (Throwable failure) {
+            android.util.Log.e("GalleryAppImpl", "Trash purge scheduling failed", failure);
+        }
+        try {
+            com.android.gallery3d.fileops.AutoFileReceiver.schedule(this);
+        } catch (Throwable failure) {
+            android.util.Log.e("GalleryAppImpl", "Auto-file scheduling failed", failure);
+        }
     }
 
     @Override

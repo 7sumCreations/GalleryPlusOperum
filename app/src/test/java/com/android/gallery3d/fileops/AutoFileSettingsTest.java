@@ -99,4 +99,96 @@ public class AutoFileSettingsTest {
         settings.setDelayMinutes(10_000);
         assertEquals(1440, settings.delayMinutes());
     }
+
+    // --- Launch crash: the stored type must never decide whether the app opens ---
+
+    @Test
+    public void aDelayStoredAsAStringByTheSettingsScreenIsReadNotCast() {
+        // Exactly what the EditTextPreference left on the user's phone. The old
+        // getInt read threw ClassCastException from Application.onCreate.
+        store.values.put(AutoFileSettings.KEY_ENABLED, true);
+        store.values.put(AutoFileSettings.KEY_DELAY_MINUTES, "5");
+
+        assertEquals(5, settings.delayMinutes());
+        assertEquals(5L * 60L * 1000L, settings.delayMillis());
+        assertEquals(150_000L, AutoFileReceiver.checkIntervalMillis(settings));
+    }
+
+    @Test
+    public void aDelayStoredAsAnIntByAnOlderBuildStillReads() {
+        store.values.put(AutoFileSettings.KEY_DELAY_MINUTES, 12);
+
+        assertEquals(12, settings.delayMinutes());
+    }
+
+    @Test
+    public void aDelayOfAnyOtherTypeFallsBackToTheDefault() {
+        store.values.put(AutoFileSettings.KEY_DELAY_MINUTES, 3.5f);
+
+        assertEquals(AutoFileSettings.DEFAULT_DELAY_MINUTES, settings.delayMinutes());
+    }
+
+    @Test
+    public void typedDelaysAreParsedWithDefaultsAndClamped() {
+        assertEquals(5, AutoFileSettings.parseDelayMinutes(null));
+        assertEquals(5, AutoFileSettings.parseDelayMinutes(""));
+        assertEquals(5, AutoFileSettings.parseDelayMinutes("   "));
+        assertEquals(5, AutoFileSettings.parseDelayMinutes("five"));
+        assertEquals(5, AutoFileSettings.parseDelayMinutes("2.5"));
+        assertEquals(7, AutoFileSettings.parseDelayMinutes(" 7 "));
+        assertEquals(1, AutoFileSettings.parseDelayMinutes("0"));
+        assertEquals(1, AutoFileSettings.parseDelayMinutes("-3"));
+        assertEquals(1440, AutoFileSettings.parseDelayMinutes("99999"));
+        assertEquals(1440, AutoFileSettings.parseDelayMinutes("99999999999999"));
+        assertEquals(5, AutoFileSettings.parseDelayMinutes("999999999999999999999999"));
+    }
+
+    @Test
+    public void theDelayIsWrittenAsAStringSoTheSettingsScreenCanReadItBack() {
+        settings.setDelayMinutes(9);
+
+        assertEquals("9", store.values.get(AutoFileSettings.KEY_DELAY_MINUTES));
+    }
+
+    @Test
+    public void aWrongTypedOrBlankWatchedFolderFallsBackToTheCameraFolder() {
+        store.values.put(AutoFileSettings.KEY_WATCHED_FOLDER, 42);
+        assertEquals("DCIM/Camera/", settings.watchedFolder());
+
+        store.values.put(AutoFileSettings.KEY_WATCHED_FOLDER, "  /  ");
+        assertEquals("DCIM/Camera/", settings.watchedFolder());
+    }
+
+    @Test
+    public void aWrongTypedEnabledFlagIsReadSafely() {
+        store.values.put(AutoFileSettings.KEY_ENABLED, "true");
+        assertTrue(settings.isEnabled());
+
+        store.values.put(AutoFileSettings.KEY_ENABLED, 1);
+        assertFalse(settings.isEnabled());
+    }
+
+    @Test
+    public void repairRewritesEveryValueToTheTypeItsWidgetCasts() {
+        store.values.put(AutoFileSettings.KEY_ENABLED, "true");
+        store.values.put(AutoFileSettings.KEY_WATCHED_FOLDER, 7);
+        store.values.put(AutoFileSettings.KEY_DELAY_MINUTES, 12);
+
+        settings.repairStoredTypes();
+
+        assertEquals(Boolean.TRUE, store.values.get(AutoFileSettings.KEY_ENABLED));
+        assertEquals("DCIM/Camera/", store.values.get(AutoFileSettings.KEY_WATCHED_FOLDER));
+        assertEquals("12", store.values.get(AutoFileSettings.KEY_DELAY_MINUTES));
+    }
+
+    @Test
+    public void repairLeavesCorrectAndAbsentValuesAlone() {
+        store.values.put(AutoFileSettings.KEY_DELAY_MINUTES, "5");
+
+        settings.repairStoredTypes();
+
+        assertEquals("5", store.values.get(AutoFileSettings.KEY_DELAY_MINUTES));
+        assertFalse(store.values.containsKey(AutoFileSettings.KEY_ENABLED));
+        assertFalse(store.values.containsKey(AutoFileSettings.KEY_WATCHED_FOLDER));
+    }
 }

@@ -24,14 +24,21 @@ public class TrashPurgeReceiver extends BroadcastReceiver {
         return nowMillis + PURGE_INTERVAL_MILLIS;
     }
 
+    /** Runs from Application.onCreate on every process start: must never throw. */
     public static void schedule(Context context) {
-        AlarmManager alarms = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        Intent intent = new Intent(context, TrashPurgeReceiver.class);
-        intent.setAction(ACTION_PURGE);
-        PendingIntent pending = PendingIntent.getBroadcast(context, 0, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        alarms.setInexactRepeating(AlarmManager.RTC,
-                nextRunAt(System.currentTimeMillis()), PURGE_INTERVAL_MILLIS, pending);
+        try {
+            AlarmManager alarms =
+                    (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+            if (alarms == null) return;
+            Intent intent = new Intent(context, TrashPurgeReceiver.class);
+            intent.setAction(ACTION_PURGE);
+            PendingIntent pending = PendingIntent.getBroadcast(context, 0, intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            alarms.setInexactRepeating(AlarmManager.RTC,
+                    nextRunAt(System.currentTimeMillis()), PURGE_INTERVAL_MILLIS, pending);
+        } catch (RuntimeException failure) {
+            Log.e(TAG, "Could not schedule trash purge", failure);
+        }
     }
 
     @Override
@@ -46,6 +53,9 @@ public class TrashPurgeReceiver extends BroadcastReceiver {
                     int purged = new FileOpEngine(new ContentResolverGateway(appContext))
                             .purgeExpiredTrash(System.currentTimeMillis());
                     Log.i(TAG, "Purged " + purged + " expired trash items");
+                } catch (Throwable failure) {
+                    // An uncaught throw on this pool thread would kill the process.
+                    Log.e(TAG, "Trash purge threw", failure);
                 } finally {
                     pendingResult.finish();
                 }

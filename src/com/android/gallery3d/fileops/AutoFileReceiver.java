@@ -41,23 +41,40 @@ public class AutoFileReceiver extends BroadcastReceiver {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
+    /**
+     * Arms (or, when the rule is off, tears down) the repeating check. Runs from
+     * Application.onCreate on every process start, so it must never throw: a
+     * failure here is logged and auto-file simply does not run until next time.
+     * Uses an inexact alarm, which needs no SCHEDULE_EXACT_ALARM grant.
+     */
     public static void schedule(Context context) {
-        AutoFileSettings settings = AutoFileSettings.from(context);
-        if (!settings.isEnabled()) {
-            cancel(context);
-            return;
+        try {
+            AutoFileSettings settings = AutoFileSettings.from(context);
+            if (!settings.isEnabled()) {
+                cancel(context);
+                return;
+            }
+            long interval = checkIntervalMillis(settings);
+            AlarmManager alarms =
+                    (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+            if (alarms == null) return;
+            alarms.setInexactRepeating(AlarmManager.ELAPSED_REALTIME,
+                    android.os.SystemClock.elapsedRealtime() + interval, interval,
+                    pendingFor(context));
+        } catch (RuntimeException failure) {
+            Log.e(TAG, "Could not schedule auto-file", failure);
         }
-        long interval = checkIntervalMillis(settings);
-        AlarmManager alarms = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        alarms.setInexactRepeating(AlarmManager.ELAPSED_REALTIME,
-                android.os.SystemClock.elapsedRealtime() + interval, interval,
-                pendingFor(context));
     }
 
     /** Turning the rule off must stop every automatic move, immediately. */
     public static void cancel(Context context) {
-        AlarmManager alarms = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        alarms.cancel(pendingFor(context));
+        try {
+            AlarmManager alarms =
+                    (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+            if (alarms != null) alarms.cancel(pendingFor(context));
+        } catch (RuntimeException failure) {
+            Log.e(TAG, "Could not cancel auto-file", failure);
+        }
     }
 
     /** Run the rule once, synchronously. Safe to call off the main thread only. */

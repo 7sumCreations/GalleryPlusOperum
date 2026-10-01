@@ -49,6 +49,13 @@ public class GallerySettings extends PreferenceActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         getPreferenceManager().setSharedPreferencesName(AutoFileSettings.PREFS_NAME);
+        // The widgets below cast what they read back; fix any value of the wrong
+        // type (e.g. a delay an older build stored as an int) before inflating.
+        try {
+            AutoFileSettings.from(this).repairStoredTypes();
+        } catch (RuntimeException e) {
+            Log.w(TAG, "could not repair auto-file preferences", e);
+        }
         addPreferencesFromResource(R.xml.auto_file_preferences);
         findPreference(AutoFileSettings.KEY_ENABLED).setOnPreferenceChangeListener(this);
         findPreference(AutoFileSettings.KEY_DELAY_MINUTES).setOnPreferenceChangeListener(this);
@@ -141,26 +148,36 @@ public class GallerySettings extends PreferenceActivity
     @Override
     public boolean onPreferenceChange(Preference preference, Object newValue) {
         // Re-arm or tear down the alarm the moment the rule changes, so turning
-        // it off really does stop every automatic move.
-        if (AutoFileSettings.KEY_ENABLED.equals(preference.getKey())) {
-            if (Boolean.TRUE.equals(newValue)) {
-                AutoFileSettings.from(this).setEnabled(true);
-                AutoFileReceiver.schedule(this);
-            } else {
-                AutoFileSettings.from(this).setEnabled(false);
-                AutoFileReceiver.cancel(this);
+        // it off really does stop every automatic move. Nothing in here may
+        // throw: a crash in a preference listener takes the whole app down.
+        try {
+            if (AutoFileSettings.KEY_ENABLED.equals(preference.getKey())) {
+                if (Boolean.TRUE.equals(newValue)) {
+                    AutoFileSettings.from(this).setEnabled(true);
+                    AutoFileReceiver.schedule(this);
+                } else {
+                    AutoFileSettings.from(this).setEnabled(false);
+                    AutoFileReceiver.cancel(this);
+                }
+                return true;
             }
-            return true;
-        }
-        if (AutoFileSettings.KEY_DELAY_MINUTES.equals(preference.getKey())) {
-            try {
+            if (AutoFileSettings.KEY_DELAY_MINUTES.equals(preference.getKey())) {
+                String typed = newValue == null ? "" : String.valueOf(newValue).trim();
+                if (typed.isEmpty()) return false;
+                try {
+                    Long.parseLong(typed);
+                } catch (NumberFormatException notANumber) {
+                    return false;
+                }
+                // The widget persists the typed String once we return true;
+                // AutoFileSettings clamps it whenever it is read.
                 AutoFileSettings.from(this)
-                        .setDelayMinutes(Integer.parseInt(String.valueOf(newValue)));
-            } catch (NumberFormatException notANumber) {
-                return false;
+                        .setDelayMinutes(AutoFileSettings.parseDelayMinutes(typed));
+                AutoFileReceiver.schedule(this);
+                return true;
             }
-            AutoFileReceiver.schedule(this);
-            return true;
+        } catch (RuntimeException e) {
+            Log.e(TAG, "auto-file preference change failed", e);
         }
         return true;
     }
