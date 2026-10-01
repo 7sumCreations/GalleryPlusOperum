@@ -9,12 +9,12 @@ The stock AOSP gallery is private because it does very little: no network, no ac
 ## Privacy
 
 - **No internet access.** The app does not request `INTERNET`, so Android will not let it open a network connection — no telemetry, no analytics, no cloud.
-- **Minimal permissions.** Location, camera, microphone, accounts/contacts, NFC, sync, settings-write, vibrate, network-state and exact-alarm permissions have all been removed. What remains has real code behind it: photos & videos, media location metadata, notifications for background file operations, and restart-on-boot for auto-file and trash purge.
+- **Minimal permissions.** Location, camera, microphone, accounts/contacts, NFC, sync, settings-write, vibrate, network-state and exact-alarm permissions have all been removed. What remains has real code behind it: photos & videos, media location metadata, notifications for background file operations and auto-file, and restart-on-boot for auto-file and trash purge. The only permissions you are asked for are **Photos and videos** and **Notifications**, once, on first launch.
 - **No sensor use.** The legacy orientation listener that silently read the accelerometer is gone.
 - **Sharing is per item.** Share uses Android's system share sheet with a one-time read grant for exactly the items you choose. The app does not enumerate your installed apps.
 - **No file-provider exposure** of external storage.
 - **Small surface for other apps.** Other apps can only open the gallery, pick a photo or video, view a local image or video, edit an image, or choose it for a wallpaper. Crop, trim, MTP import, the old widget and the Picasa provider are not reachable from outside, nothing accepts web links or `file:` paths, and a test pins the list.
-- **No backup of app data.** `allowBackup` is off and the data-extraction rules exclude everything from cloud backup and device-to-device transfer.
+- **No backup of app data.** `allowBackup` is off and the data-extraction rules exclude everything from cloud backup and device-to-device transfer. Your photos are unaffected, but the app's settings don't carry over to a new phone.
 - **Opt-in only.** "Manage media without asking" (`MANAGE_MEDIA`) is available in Settings for people who want fewer permission prompts; the app never asks for it on its own.
 
 ## Features
@@ -23,13 +23,13 @@ New to the app? The [plain-language help](HELP.md) explains every feature step b
 
 On top of the classic AOSP gallery (albums, viewer, slideshow, editor, crop, video player):
 
-- **Move and copy** photos and videos between real folders on disk, one or many at a time, with background progress and cancel.
+- **Move and copy** photos and videos between real folders on disk, one or many at a time from the grid or one from the full-screen viewer, with background progress and cancel.
 - **One permission dialog per batch.** When Android needs your consent to modify media the app didn't create, you are asked once for the whole selection, and the operation completes after you allow it.
 - **Folders:** create, rename, move/nest and delete (the Camera folder is protected).
-- **Favourites** album.
+- **Favourites** album, with a star that shows whether a photo is already a favourite.
 - **Trash** with restore, delete permanently, empty trash and automatic purge — photos and videos alike.
 - **Undo** for the last operation.
-- **Auto-file:** optionally files new camera photos into `Pictures/YYYY/MM` after a delay you choose. It only ever touches photos taken after you switch it on.
+- **Auto-file:** optionally files new camera photos into `Pictures/YYYY/MM` after a delay you choose. It only ever touches photos taken after you switch it on, tells you what it filed with a notification you can Undo for 24 hours, and tells you when it had to skip photos for want of permission.
 
 What's coming next — fast filing, export, an encrypted vault and more — is in the [roadmap](ROADMAP.md).
 

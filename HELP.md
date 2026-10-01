@@ -4,11 +4,14 @@ A private gallery for your photos and videos. Everything stays on your phone.
 
 ## Before you start
 
-The app does not ask for permissions on its own. To set it up:
+The first time you open the app, Android asks two things:
 
-- Open Android **Settings → Apps → Gallery → Permissions**.
-- Allow **Photos and videos**. Without this the app has nothing to show.
-- Allow **Notifications** if you want to see progress, and a Cancel button, while photos are being moved or copied.
+- **Photos and videos**: allow it. Without it the app has nothing to show.
+- **Notifications** (Android 13 and newer): allow it if you want to see progress and a Cancel button while photos are moved or copied, and to hear what Auto-file did. This is asked only once.
+
+If you said no to Photos and videos, the app explains why it needs it each time you come back. Tap **Allow access** to be asked again, or **Open settings**, then tap **Permissions → Photos and videos**. **Not now** leaves the gallery empty for the moment.
+
+To change either one later, open Android **Settings → Apps → Gallery → Permissions**.
 
 ## Selecting photos
 
@@ -21,11 +24,12 @@ The buttons at the top act on everything you selected. Anything that doesn't fit
 
 ## Move or copy to a folder
 
-- Select photos or videos → tap **⋮** → **Move** or **Copy to folder**.
+- Select photos or videos → tap **⋮** → **Move** or **Copy to folder**. Or open one full screen → **⋮** → **Move** or **Copy to folder**.
 - Pick a folder from the list. The list shows folders inside Pictures and DCIM that already have something in them.
 - To make a new folder, tap **+ New folder** at the top of the list, type a name and tap **OK**. Your photos go straight into it. New folders are made inside **Pictures**.
 - **Move** takes the photos out of their old folder. Their dates don't change.
 - **Copy** leaves the originals where they are and puts a second copy in the folder you chose.
+- From the full-screen viewer, after **Move** you go back to the grid, because the photo has left that folder. After **Copy** you stay on the photo.
 - If a file with the same name is already there, the new one gets a number, like "IMG_1234 (1).jpg". Nothing is overwritten.
 
 While the app works, a notification shows how far it has got (for example "3 of 20") with a **Cancel** button. Cancel stops after the current item. Whatever was already done stays done, and you can still Undo it.
@@ -49,7 +53,7 @@ To stop seeing this dialog, see "Manage media without asking" below.
 - The bar stays for **10 seconds**. Tap **UNDO** to reverse the whole action.
 - Only the last action can be undone. If you leave the app before the job finishes, Undo isn't shown.
 - Undoing a copy deletes the copies. The originals are untouched.
-- There is no Undo for **Delete permanently**, **Empty trash**, renaming or moving a folder, or auto-file.
+- There is no Undo for **Delete permanently**, **Empty trash**, or renaming or moving a folder. Auto-file has its own Undo, in its notification (see "Auto-file new photos").
 
 ## Folders
 
@@ -69,8 +73,9 @@ Good to know:
 
 ## Favourites
 
-- **Add**: select photos → tap the **star**. Or open a photo full screen and tap the star.
-- **Remove**: open the photo full screen and tap the star again. (In a selection, the star only adds.)
+- In the full-screen viewer the star shows whether the photo is a favourite: **filled** means it is, **outline** means it isn't. Tap it to add or remove.
+- **Add**: select photos → tap the **star**.
+- **Remove**: select photos that are all favourites → tap the **star**. If even one selected photo isn't a favourite, the star adds instead.
 - The **Favourites** album is at the top of the Albums screen. Photos stay in their own folders; Favourites just gathers them in one place.
 - Photos marked as favourites by other apps show up here too.
 - For now, Favourites shows photos only, not videos.
@@ -102,8 +107,12 @@ It moves new photos out of one folder and into **Pictures/year/month** (for exam
 - **Watch this folder** is the folder it looks in. The default is DCIM/Camera, where your camera saves. Photos in sub-folders are left alone.
 - **Wait before moving** is how many minutes a new photo is left alone first (default 5, anything from 1 minute to 1 day). The app checks in the background, so it can take a little longer than that.
 - It files **photos only**, not videos. A photo with no date taken stays where it is.
-- It never shows the permission dialog. If Android would need to ask before moving a photo, auto-file leaves it and tries again on its next check.
-- It works quietly: there is no notification and no Undo. To put a photo back, select it and use **Move**.
+- After it moves photos, a notification says so, for example "Filed 3 new photos into Pictures/2026/10", with an **Undo** button. Photos it files over the next 24 hours join that same notification.
+- **Undo** puts back everything the notification counts. It works for **24 hours**, or until you swipe the notification away. A photo you have moved or deleted yourself since is left alone.
+- A photo you put back with Undo is never auto-filed again.
+- It never shows the permission dialog. Photos taken by your camera app need **Manage media without asking** to be filed in the background (see below). Without it, auto-file leaves them where they are, tries again on its next check, and tells you in a notification. Tapping that notification opens Settings. It tells you again only if more photos are waiting, or after a week.
+- While auto-file is on without that permission, Settings shows a note under the switch, **Camera photos need permission**. Tap it to open the setting.
+- The notifications need the **Notifications** permission. Without it, auto-file still works, but you won't see what it did or get its Undo. You can always put a photo back by selecting it and using **Move**.
 - To stop it, switch off **File new photos automatically**. That stops all automatic moves straight away. Photos already filed stay where they are.
 
 ## Manage media without asking
@@ -127,21 +136,24 @@ Android 12 and newer only. Find it in **⋮ → Settings → Media access → Ma
 
 - **No internet.** The app has no permission to go online, so Android won't let it connect. No ads, no tracking, no cloud, no update checks.
 - **Nothing leaves your phone** unless you share it yourself.
-- **Few permissions.** It doesn't use the microphone, your contacts or accounts, or your phone's location.
+- **Few permissions.** The only ones Android asks you about are **Photos and videos** and **Notifications**. It doesn't use the camera, the microphone, your contacts or accounts, or your phone's location.
 - **No sensors.** It doesn't read the motion sensors.
 - **No backups of app data.** The app's settings and its Auto-file history are not copied into Android backups or to a new phone, so set it up again there. Your photos and videos are not affected.
+- **Less open to other apps.** Other apps can still open a photo or video here, pick one from the gallery, edit an image or set a wallpaper. They can no longer use its Crop or Trim, or open web links or online streams with it.
 - **Your choice.** "Manage media without asking" is only ever turned on by you.
 
 ## Known limitations
 
-- **Move** and **Copy** show up in the full-screen viewer's menu but don't work there yet. Select the photos in the grid instead.
-- The star in the full-screen viewer doesn't show whether a photo is already a favourite. Tapping it switches the photo in or out of Favourites.
 - Favourites shows photos only, not videos.
+- If another app opens the gallery to pick a photo before you have allowed **Photos and videos**, the gallery looks empty. Open the gallery itself once and allow access, then try again.
+- When another app asks you to pick a photo, you get the whole photo. The gallery no longer crops it for that app.
+- When you play a video that another app (such as some file managers) handed over, **Share** isn't shown.
+- Settings and Auto-file history don't carry over to a new phone. Set them up again there.
+- Auto-file can only file camera photos in the background once "Manage media without asking" is allowed. On Android 10 and 11, which don't have that setting, move them by hand.
 - Renaming or moving a folder can't be undone.
 - In Trash, camera photos may show a blank thumbnail.
 - Tapping **Deny** straight after making a new folder can make that new, empty folder disappear.
 - Trim and Mute may fail for videos in unusual folders.
-- Auto-file has no notification and no Undo.
 - The app hasn't been tested on Android 10.
 
 ## Something went wrong?

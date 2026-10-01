@@ -18,6 +18,15 @@ Turn the read-only gallery into one where you file photos into real folders, saf
 - Auto-file new camera photos into `Pictures/YYYY/MM`
 - Hardening: unused permissions removed, sensor access removed, system share sheet, no file-provider exposure
 
+v0.1.1:
+
+- In-app Help screen
+- Asks for photo and notification access on first launch, and explains what to do if you said no
+- Move and copy from the full-screen viewer
+- The Favourite star shows whether a photo is already a favourite
+- Auto-file tells you what it filed, with Undo, and when it had to skip photos
+- Security hardening: fewer ways in for other apps, no camera permission, no app-data backup
+
 ## 🔨 Epic 2a · Fast filing, export, folder hygiene
 
 Make filing fast, get photos off the phone on your terms, and tidy the grid.
