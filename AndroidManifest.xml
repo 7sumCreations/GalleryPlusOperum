@@ -4,9 +4,6 @@
         xmlns:android="http://schemas.android.com/apk/res/android">
 
 
-    <permission android:name="${applicationId}.permission.GALLERY_PROVIDER"
-            android:protectionLevel="signatureOrSystem" />
-
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
@@ -20,7 +17,6 @@
     <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
     <uses-permission android:name="android.permission.MANAGE_MEDIA" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="${applicationId}.permission.GALLERY_PROVIDER" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <supports-screens android:smallScreens="false"
@@ -192,20 +188,6 @@
             </intent-filter>
         </activity-alias>
 
-         <!-- This activity receives USB_DEVICE_ATTACHED intents and allows importing
-         media from attached MTP devices, like cameras and camera phones -->
-        <activity android:launchMode="singleInstance"
-            android:taskAffinity="" android:name="com.android.gallery3d.ingest.IngestActivity"
-            android:configChanges="orientation|screenSize"
-            android:exported="true"
-            android:label="@string/app_name">
-            <intent-filter>
-                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
-            </intent-filter>
-            <meta-data android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
-                android:resource="@xml/device_filter" />
-        </activity>
-        <service android:name="com.android.gallery3d.ingest.IngestService" />
         <service android:name="com.android.gallery3d.fileops.FileOpService"
                 android:exported="false" />
 
@@ -220,17 +202,11 @@
             <meta-data android:name="android.wallpaper.preview"
                     android:resource="@xml/wallpaper_picker_preview" />
         </activity>
+        <!-- Internal only: PhotoPage starts it explicitly. It trims the file
+             at a caller-supplied path, so no other app may reach it. -->
         <activity android:name="com.android.gallery3d.app.TrimVideo"
-                android:exported="true"
-                android:label="@string/trim_label">
-            <intent-filter android:label="@string/crop_label">
-                <action android:name="com.android.camera.action.TRIM" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="content" />
-                <data android:scheme="file" />
-                <data android:mimeType="video/*" />
-            </intent-filter>
-        </activity>
+                android:exported="false"
+                android:label="@string/trim_label" />
 
         <provider
             android:name="com.android.gallery3d.filtershow.provider.SharedImageProvider"
@@ -293,37 +269,18 @@
                 android:excludeFromRecents="true"
                 android:exported="false" />
 
-        <provider android:name="com.android.gallery3d.provider.GalleryProvider"
-                android:syncable="false"
-                android:grantUriPermissions="true"
-                android:exported="true"
-                android:permission="${applicationId}.permission.GALLERY_PROVIDER"
-                android:authorities="${applicationId}.provider" />
         <provider
                 android:name="com.android.photos.data.PhotoProvider"
                 android:authorities="${applicationId}.photoprovider"
                 android:syncable="false"
                 android:exported="false"/>
-        <activity android:name="com.android.gallery3d.gadget.WidgetClickHandler" />
         <activity android:name="com.android.gallery3d.app.DialogPicker"
                 android:configChanges="keyboardHidden|orientation|screenSize"
                 android:theme="@style/DialogPickerTheme"/>
         <activity android:name="com.android.gallery3d.app.AlbumPicker"
                 android:configChanges="keyboardHidden|orientation|screenSize"
                 android:theme="@style/DialogPickerTheme"/>
-        <activity android:name="com.android.gallery3d.gadget.WidgetTypeChooser"
-                android:configChanges="keyboardHidden|orientation|screenSize"
-                android:theme="@style/Theme.Gallery.Dialog"/>
 
-        <receiver android:name="com.android.gallery3d.app.PackagesMonitor"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.PACKAGE_ADDED"/>
-                <action android:name="android.intent.action.PACKAGE_REMOVED"/>
-                <action android:name="android.intent.action.PACKAGE_CHANGED"/>
-                <data android:scheme="package"/>
-            </intent-filter>
-        </receiver>
         <receiver android:name="com.android.gallery3d.fileops.TrashPurgeReceiver"
                 android:exported="false">
             <intent-filter>
@@ -338,28 +295,16 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
-        <service android:name="com.android.gallery3d.app.PackagesMonitor$AsyncService"
-                 android:permission="android.permission.BIND_JOB_SERVICE"
-                 android:exported="true"/>
-        <service android:name="com.android.gallery3d.gadget.WidgetService"
-                android:permission="android.permission.BIND_REMOTEVIEWS"/>
-        <activity android:name="com.android.gallery3d.gadget.WidgetConfigure"
-                android:configChanges="keyboardHidden|orientation|screenSize"
-                android:exported="true"
-                android:theme="@style/android:Theme.Translucent.NoTitleBar">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
-            </intent-filter>
-        </activity>
         <service android:name="com.android.gallery3d.app.BatchService" />
 
+        <!-- BOOT_COMPLETED is sent by the system, which reaches
+             unexported receivers. -->
         <receiver android:name="com.android.camera.DisableCameraReceiver"
-            android:exported="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
 
-        <service android:name="com.android.camera.MediaSaveService" />
     </application>
 </manifest>
