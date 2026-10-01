@@ -15,8 +15,10 @@ android {
         applicationId = galleryApplicationId
         minSdk = 29
         targetSdk = 33
-        versionCode = 40030
-        versionName = "1.1.40030"
+        // versionCode only ever goes up (debug builds share it, and Android
+        // refuses downgrades). 0.1.0 = Epic 1.
+        versionCode = 40100
+        versionName = "0.1.0"
         ndk.abiFilters += listOf("arm64-v8a")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -46,14 +48,37 @@ android {
 
     useLibrary("org.apache.http.legacy")
 
+    // Release signing comes from outside the repo: the keystore path as a
+    // Gradle property and the password as an environment variable, both
+    // supplied by scripts/release.sh. Without them the release APK is left
+    // unsigned (uninstallable) rather than falling back to a debug key.
+    val releaseKeystore = providers.gradleProperty("GALLERY_RELEASE_KEYSTORE").orNull
+    val releasePassword = providers.environmentVariable("GALLERY_RELEASE_KEY_PASSWORD").orNull
+    val releaseSigningReady = releaseKeystore != null && releasePassword != null
+    signingConfigs {
+        if (releaseSigningReady) {
+            create("release") {
+                storeFile = file(releaseKeystore!!)
+                storeType = "pkcs12"
+                storePassword = releasePassword
+                keyAlias = "release"
+                keyPassword = releasePassword
+            }
+        }
+    }
+
     buildTypes {
         getByName("debug") {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
         }
         getByName("release") {
-            isMinifyEnabled = true
+            // Off for 0.1.0 so the release runs exactly the code that was
+            // verified on device as a debug build. Re-enable only with its
+            // own on-device test round (AOSP code relies on reflection).
+            isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "../proguard.flags")
+            signingConfig = if (releaseSigningReady) signingConfigs.getByName("release") else null
         }
     }
 

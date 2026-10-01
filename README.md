@@ -29,6 +29,20 @@ On top of the classic AOSP gallery (albums, viewer, slideshow, editor, crop, vid
 
 What's coming next — fast filing, export, an encrypted vault and more — is in the [roadmap](ROADMAP.md).
 
+## Install
+
+Download the APK from the [Releases](https://github.com/cpw7776/GrapheneGalleryFunctio/releases) page, or let [Obtainium](https://github.com/ImranR98/Obtainium) track this repository and install updates for you (add the repo URL as an app source). The app itself never checks for updates — it has no network access.
+
+**Verify what you install.** Every release is signed with the same key. Its certificate SHA-256 fingerprint is:
+
+```
+50:79:AA:22:CB:CD:04:97:88:EC:24:F9:AA:19:98:53:32:70:07:B4:3F:9D:83:47:0C:D8:A1:56:F5:57:29:90
+```
+
+Check it with [AppVerifier](https://github.com/soupslurpr/AppVerifier) on the phone, or with `apksigner verify --print-certs <apk>` on a computer. Each release also lists the APK's own SHA-256 checksum.
+
+The release package is `org.gallery2.fork`. It installs alongside the stock gallery and does not replace it.
+
 ## Building
 
 The upstream sources build inside the AOSP tree (`Android.bp`). This fork also carries a standalone Gradle/CMake harness:
@@ -40,12 +54,14 @@ export JAVA_HOME=/path/to/jdk-17
 # APK: app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Requirements: JDK 17, Android SDK with NDK/CMake. Min SDK 29, target SDK 33.
+Requirements: JDK 17, Android SDK with NDK/CMake. Min SDK 29, target SDK 33. Point Gradle at your SDK with `ANDROID_HOME` or a `local.properties` file containing `sdk.dir=/path/to/sdk`.
+
+Debug builds install as a separate app (`org.gallery2.fork.debug`). Release builds are signed by `scripts/release.sh`, which needs the maintainer's key and refuses to output an APK signed by anything else; a release build without the key is left unsigned.
 
 ## Status
 
-Under active development and tested by hand on a GrapheneOS Pixel. Debug builds only for now.
+Under active development, tested by hand on a GrapheneOS Pixel before each release. One release per epic — see the [roadmap](ROADMAP.md).
 
 ## License
 
-Apache License 2.0, as upstream — see the license headers in the source files. Original code © The Android Open Source Project; GrapheneOS changes © their respective authors.
+[Apache License 2.0](LICENSE) — you are free to use, modify, fork and redistribute this project, including commercially, as long as you keep the license and copyright notices and state your changes. See [NOTICE](NOTICE) for attribution. Original code © The Android Open Source Project; GrapheneOS changes © their respective authors.
