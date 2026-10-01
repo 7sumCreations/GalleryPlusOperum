@@ -48,7 +48,13 @@ The release package is `org.gallery2.fork`. It installs alongside the stock gall
 The upstream sources build inside the AOSP tree (`Android.bp`). This fork also carries a standalone Gradle/CMake harness:
 
 ```bash
+# libjpeg-turbo is a git submodule — clone with it, or the native build fails
+git clone --recurse-submodules https://github.com/cpw7776/GrapheneGalleryFunctio.git
+cd GrapheneGalleryFunctio
+# (already cloned without it? run: git submodule update --init)
+
 export JAVA_HOME=/path/to/jdk-17
+export ANDROID_HOME=/path/to/android-sdk
 ./gradlew :app:testDebugUnitTest --max-workers=4
 ./gradlew :app:assembleDebug --max-workers=4
 # APK: app/build/outputs/apk/debug/app-debug.apk
