@@ -33,6 +33,7 @@ import android.widget.Toast;
 import com.android.gallery3d.R;
 import com.android.gallery3d.fileops.AutoFileReceiver;
 import com.android.gallery3d.fileops.AutoFileSettings;
+import com.android.gallery3d.help.HelpActivity;
 
 public class GallerySettings extends PreferenceActivity
         implements Preference.OnPreferenceChangeListener {
@@ -43,6 +44,8 @@ public class GallerySettings extends PreferenceActivity
     static final String KEY_MEDIA_ACCESS_CATEGORY = "media_access_category";
     /** Non-persistent entry that shows the real grant and opens system settings. */
     static final String KEY_MEDIA_ACCESS_MANAGE = "media_access_manage";
+    /** Non-persistent entry that opens the in-app Help screen. */
+    static final String KEY_HELP_OPEN = "help_open";
 
     @Override
     @SuppressWarnings("deprecation")
@@ -60,6 +63,27 @@ public class GallerySettings extends PreferenceActivity
         findPreference(AutoFileSettings.KEY_ENABLED).setOnPreferenceChangeListener(this);
         findPreference(AutoFileSettings.KEY_DELAY_MINUTES).setOnPreferenceChangeListener(this);
         setUpMediaAccess();
+        setUpHelp();
+    }
+
+    @SuppressWarnings("deprecation")
+    private void setUpHelp() {
+        Preference help = findPreference(KEY_HELP_OPEN);
+        if (help == null) return;
+        help.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+            @Override
+            public boolean onPreferenceClick(Preference preference) {
+                // A click handler must never let an exception escape.
+                try {
+                    startActivity(new Intent(GallerySettings.this, HelpActivity.class));
+                } catch (RuntimeException e) {
+                    Log.w(TAG, "could not open help", e);
+                    Toast.makeText(GallerySettings.this, R.string.help_unavailable,
+                            Toast.LENGTH_SHORT).show();
+                }
+                return true;
+            }
+        });
     }
 
     @Override

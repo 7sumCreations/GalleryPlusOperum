@@ -34,4 +34,15 @@
                 android:defaultValue="5"
                 android:dependency="auto_file_enabled" />
     </PreferenceCategory>
+    <!-- Opens HelpActivity (click handled in GallerySettings, because the
+         application id differs between debug and release builds). -->
+    <PreferenceCategory
+            android:key="help_category"
+            android:title="@string/help_title">
+        <Preference
+                android:key="help_open"
+                android:title="@string/help_title"
+                android:summary="@string/help_open_summary"
+                android:persistent="false" />
+    </PreferenceCategory>
 </PreferenceScreen>

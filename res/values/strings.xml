@@ -1234,4 +1234,11 @@ CHAR LIMIT = NONE] -->
     <string name="media_access_manage_summary_not_allowed">Not allowed. Allowing it would let this app modify, move or delete any photo or video on this device without asking each time. You can revoke it later in system settings.</string>
     <!-- Toast when no system settings screen could be opened. -->
     <string name="media_access_open_failed">Couldn\'t open system settings</string>
+
+    <!-- Title of the Help category and entry in Settings, and of the Help screen. -->
+    <string name="help_title">Help</string>
+    <!-- Summary under the Help entry in Settings. -->
+    <string name="help_open_summary">How to use the gallery, in plain words</string>
+    <!-- Shown on the Help screen when the help text could not be loaded. -->
+    <string name="help_unavailable">The help text could not be loaded. You can also read it on the project\'s GitHub page, in the file HELP.md.</string>
 </resources>

@@ -17,6 +17,8 @@ The stock AOSP gallery is private because it does very little: no network, no ac
 
 ## Features
 
+New to the app? The [plain-language help](HELP.md) explains every feature step by step — the same text is in the app under ⋮ → Settings → Help.
+
 On top of the classic AOSP gallery (albums, viewer, slideshow, editor, crop, video player):
 
 - **Move and copy** photos and videos between real folders on disk, one or many at a time, with background progress and cancel.

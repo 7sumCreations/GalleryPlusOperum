@@ -100,6 +100,62 @@ android {
     }
 }
 
+// ---------------------------------------------------------------------------
+// In-app Help. HELP.md at the repo root is the single source of truth: it is
+// what GitHub shows, and each variant's build copies it, byte for byte, into a
+// generated assets directory that AGP packages into the APK. There is no
+// checked-in copy of the help text anywhere else, so the two cannot diverge.
+// HelpAssetSourceTest compares the generated asset against HELP.md.
+// ---------------------------------------------------------------------------
+abstract class CopyHelpAsset : DefaultTask() {
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val source: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun copy() {
+        val dir = outputDir.get().asFile
+        dir.deleteRecursively()
+        dir.mkdirs()
+        // Must match HelpActivity.ASSET_NAME.
+        source.get().asFile.copyTo(File(dir, "HELP.md"), overwrite = true)
+    }
+}
+
+val helpMarkdown: RegularFile = rootProject.layout.projectDirectory.file("HELP.md")
+
+androidComponents {
+    onVariants { variant ->
+        val capitalised = variant.name.replaceFirstChar { it.uppercase() }
+        val copyHelp = tasks.register<CopyHelpAsset>("copy${capitalised}HelpAsset") {
+            source.set(helpMarkdown)
+        }
+        // AGP sets outputDir and wires every task that reads assets to it.
+        variant.sources.assets?.addGeneratedSourceDirectory(copyHelp, CopyHelpAsset::outputDir)
+
+        // The variant's JVM tests check the generated asset against HELP.md.
+        tasks.withType<Test>().matching { it.name == "test${capitalised}UnitTest" }
+            .configureEach {
+                dependsOn(copyHelp)
+                inputs.file(helpMarkdown).withPathSensitivity(PathSensitivity.NONE)
+                    .withPropertyName("helpMarkdown")
+                val generated = copyHelp.flatMap { it.outputDir }
+                inputs.dir(generated).withPathSensitivity(PathSensitivity.RELATIVE)
+                    .withPropertyName("helpAssetDir")
+                val sourcePath = helpMarkdown.asFile.absolutePath
+                jvmArgumentProviders.add(CommandLineArgumentProvider {
+                    listOf(
+                        "-Dgallery.help.source=$sourcePath",
+                        "-Dgallery.help.generatedDir=${generated.get().asFile.absolutePath}",
+                    )
+                })
+            }
+    }
+}
+
 dependencies {
     // Mirrors static_libs in Android.bp
     implementation("androidx.fragment:fragment:1.8.9")

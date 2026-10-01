@@ -282,6 +282,12 @@
                 android:theme="@style/Theme.Gallery"
                 android:configChanges="orientation|keyboardHidden|screenSize" />
 
+        <activity android:name="com.android.gallery3d.help.HelpActivity"
+                android:label="@string/help_title"
+                android:theme="@style/Theme.Gallery"
+                android:configChanges="orientation|keyboardHidden|screenSize"
+                android:exported="false" />
+
         <activity android:name="com.android.gallery3d.fileops.ConsentActivity"
                 android:theme="@android:style/Theme.Translucent.NoTitleBar"
                 android:excludeFromRecents="true"
