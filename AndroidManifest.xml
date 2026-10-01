@@ -4,6 +4,13 @@
         xmlns:android="http://schemas.android.com/apk/res/android">
 
 
+    <!-- Guards SharedImageProvider. Signature level so no other app can
+         define (squat) these names first and grant them to itself. -->
+    <permission android:name="${applicationId}.filtershow.permission.READ"
+            android:protectionLevel="signature" />
+    <permission android:name="${applicationId}.filtershow.permission.WRITE"
+            android:protectionLevel="signature" />
+
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
@@ -186,6 +193,7 @@
         <provider
             android:name="com.android.gallery3d.filtershow.provider.SharedImageProvider"
             android:authorities="${applicationId}.filtershow.provider.SharedImageProvider"
+            android:exported="false"
             android:grantUriPermissions="true"
             android:readPermission="${applicationId}.filtershow.permission.READ"
             android:writePermission="${applicationId}.filtershow.permission.WRITE" />

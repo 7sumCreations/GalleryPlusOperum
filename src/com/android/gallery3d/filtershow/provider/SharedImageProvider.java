@@ -43,7 +43,13 @@ public class SharedImageProvider extends ContentProvider {
     public static final Uri CONTENT_URI = Uri.parse("content://" + AUTHORITY + "/image");
     public static final String PREPARE = "prepare";
 
-    public static String LOCAL_PATH = (new File(CONTENT_URI.getPath())).getAbsolutePath();
+    /**
+     * The one file this provider may serve: the editor's share output, set
+     * by the PREPARE insert that only this app can make (the provider is not
+     * exported; receivers only ever get a read grant). The old check compared
+     * against "/image", which no real file path starts with.
+     */
+    private static volatile String sSharedPath;
 
     private final String[] mMimeStreamType = {
             MIME_TYPE
@@ -68,8 +74,9 @@ public class SharedImageProvider extends ContentProvider {
 
     @Override
     public Uri insert(Uri uri, ContentValues values) {
-        if (values.containsKey(PREPARE)) {
-            if (values.getAsBoolean(PREPARE)) {
+        if (values != null && values.containsKey(PREPARE)) {
+            if (Boolean.TRUE.equals(values.getAsBoolean(PREPARE))) {
+                sSharedPath = canonicalPath(uri.getLastPathSegment());
                 mImageReadyCond.close();
             } else {
                 mImageReadyCond.open();
@@ -92,7 +99,7 @@ public class SharedImageProvider extends ContentProvider {
     public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs,
             String sortOrder) {
         String uriPath = uri.getLastPathSegment();
-        if (uriPath == null) {
+        if (uriPath == null || !isSharedFile(uriPath)) {
             return null;
         }
         if (projection == null) {
@@ -131,38 +138,29 @@ public class SharedImageProvider extends ContentProvider {
     public ParcelFileDescriptor openFile(Uri uri, String mode)
             throws FileNotFoundException {
         String uriPath = uri.getLastPathSegment();
-        if (uriPath == null) {
-            return null;
+        if (uriPath == null || !isSharedFile(uriPath)) {
+            throw new FileNotFoundException("not shared: " + uri);
         }
         // Here we need to block until the image is ready
         mImageReadyCond.block();
         File path = new File(uriPath);
-        ensureValidImagePath(path);
         int imode = 0;
         imode |= ParcelFileDescriptor.MODE_READ_ONLY;
         return ParcelFileDescriptor.open(path, imode);
     }
 
-    /**
-     * Ensure that the provided file path is part of the image directory.
-     * Prevent unauthorized access to other directories by path traversal.
-     * Throw security exception for paths outside the directory.
-     *
-     * @param path The path of the file to check. This path is expected to point to the image
-     *             directory.
-     * @throws SecurityException     Throws SecurityException if the path is not part of the image
-     *                               directory.
-     * @throws FileNotFoundException Throws FileNotFoundException if there is
-     *                               no file associated with the given URI.
-     */
-    private void ensureValidImagePath(File path) throws FileNotFoundException {
+    /** True only for the exact file the editor prepared for sharing. */
+    private static boolean isSharedFile(String path) {
+        String shared = sSharedPath;
+        return shared != null && shared.equals(canonicalPath(path));
+    }
+
+    private static String canonicalPath(String path) {
+        if (path == null || path.isEmpty()) return null;
         try {
-            if (!path.getCanonicalPath().startsWith(LOCAL_PATH)) {
-                throw new SecurityException(
-                        "The requested file path is not part of the image directory");
-            }
+            return new File(path).getCanonicalPath();
         } catch (IOException e) {
-            throw new FileNotFoundException(e.getMessage());
+            return null;
         }
     }
 }
