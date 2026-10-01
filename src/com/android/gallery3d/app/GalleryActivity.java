@@ -142,12 +142,12 @@ public final class GalleryActivity extends AbstractGalleryActivity implements On
     }
 
     private void startViewAction(Intent intent) {
-        Uri data = intent.getData();
-        if (data != null && !IncomingUris.isForeignContent(this, data)) {
+        Uri viewUri = intent.getData();
+        if (viewUri != null && !IncomingUris.isForeignContent(this, viewUri)) {
             // Explicit intents skip the manifest filters, so check here too:
             // never open a file: path or this app's own provider data for
             // another app (it could then be shared on from the viewer).
-            Log.w(TAG, "refusing to view " + data);
+            Log.w(TAG, "refusing to view " + viewUri);
             Toast.makeText(this, R.string.no_such_item, Toast.LENGTH_LONG).show();
             finish();
             return;
