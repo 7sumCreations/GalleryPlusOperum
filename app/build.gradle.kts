@@ -156,6 +156,18 @@ androidComponents {
     }
 }
 
+// ManifestExposureTest reads the shipped manifest and backup rules straight
+// from the repo root. Declare them as inputs so a manifest-only change re-runs
+// the unit tests instead of being skipped as UP-TO-DATE.
+tasks.withType<Test>().configureEach {
+    inputs.file(rootProject.layout.projectDirectory.file("AndroidManifest.xml"))
+        .withPathSensitivity(PathSensitivity.NONE)
+        .withPropertyName("shippedManifest")
+    inputs.file(rootProject.layout.projectDirectory.file("res/xml/data_extraction_rules.xml"))
+        .withPathSensitivity(PathSensitivity.NONE)
+        .withPropertyName("dataExtractionRules")
+}
+
 dependencies {
     // Mirrors static_libs in Android.bp
     implementation("androidx.fragment:fragment:1.8.9")
