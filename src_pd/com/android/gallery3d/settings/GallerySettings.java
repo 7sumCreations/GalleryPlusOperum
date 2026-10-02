@@ -20,6 +20,7 @@ import android.annotation.TargetApi;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Resources;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -33,6 +34,7 @@ import android.widget.Toast;
 
 import com.android.gallery3d.R;
 import com.android.gallery3d.fileops.AutoFileReceiver;
+import com.android.gallery3d.fileops.AutoFileRunNow;
 import com.android.gallery3d.fileops.AutoFileSettings;
 import com.android.gallery3d.help.HelpActivity;
 
@@ -51,6 +53,8 @@ public class GallerySettings extends PreferenceActivity
     static final String KEY_AUTO_FILE_CATEGORY = "auto_file_category";
     /** Note under the Auto-file switch while camera photos cannot be filed. */
     static final String KEY_AUTO_FILE_PERMISSION_NOTE = "auto_file_permission_note";
+    /** Non-persistent entry that runs one Auto-file check now. */
+    static final String KEY_AUTO_FILE_RUN_NOW = "auto_file_run_now";
 
     /** Held while removed from the screen, so it can be put back in its place. */
     private Preference mPermissionNote;
@@ -72,7 +76,67 @@ public class GallerySettings extends PreferenceActivity
         findPreference(AutoFileSettings.KEY_DELAY_MINUTES).setOnPreferenceChangeListener(this);
         setUpMediaAccess();
         setUpPermissionNote();
+        setUpRunNow();
         setUpHelp();
+    }
+
+    @SuppressWarnings("deprecation")
+    private void setUpRunNow() {
+        Preference runNow = findPreference(KEY_AUTO_FILE_RUN_NOW);
+        if (runNow == null) return;
+        runNow.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+            @Override
+            public boolean onPreferenceClick(Preference preference) {
+                // A click handler must never let an exception escape.
+                try {
+                    final Context app = getApplicationContext();
+                    AutoFileReceiver.runNow(app, new AutoFileReceiver.RunListener() {
+                        @Override
+                        public void onRunFinished(boolean enabled,
+                                AutoFileReceiver.RunOutcome outcome) {
+                            Toast.makeText(app, runNowMessage(app, enabled, outcome),
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    });
+                } catch (RuntimeException e) {
+                    Log.w(TAG, "could not run auto-file now", e);
+                }
+                return true;
+            }
+        });
+    }
+
+    /** The Toast after "File now". */
+    static String runNowMessage(Context context, boolean enabled,
+            AutoFileReceiver.RunOutcome outcome) {
+        Resources res = context.getResources();
+        int moved = outcome == null ? -1 : outcome.moved;
+        int need = outcome == null ? 0 : outcome.needPermission;
+        switch (AutoFileRunNow.kindOf(enabled, moved, need)) {
+            case OFF:
+                return res.getString(R.string.auto_file_run_now_off);
+            case FILED:
+                return res.getQuantityString(R.plurals.auto_file_run_now_filed, moved, moved);
+            case FILED_AND_NEED_PERMISSION:
+                return res.getQuantityString(R.plurals.auto_file_run_now_filed, moved, moved)
+                        + "\n" + res.getQuantityString(
+                                R.plurals.auto_file_run_now_need_permission, need, need);
+            case NEED_PERMISSION:
+                return res.getQuantityString(
+                        R.plurals.auto_file_run_now_need_permission, need, need);
+            case NOTHING_YET:
+                int minutes;
+                try {
+                    minutes = AutoFileSettings.from(context).delayMinutes();
+                } catch (RuntimeException e) {
+                    minutes = AutoFileSettings.DEFAULT_DELAY_MINUTES;
+                }
+                return res.getQuantityString(R.plurals.auto_file_run_now_nothing,
+                        minutes, minutes);
+            case FAILED:
+            default:
+                return res.getString(R.string.auto_file_run_now_failed);
+        }
     }
 
     /**

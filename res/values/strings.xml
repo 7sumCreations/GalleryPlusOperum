@@ -1271,6 +1271,24 @@ CHAR LIMIT = NONE] -->
     <!-- Settings note under the Auto-file switch while Manage media is not allowed. -->
     <string name="auto_file_permission_note_title">Camera photos need permission</string>
     <string name="auto_file_permission_note_summary">Photos taken by the Camera app can only be filed automatically when \'Manage media without asking\' is allowed. Until then Auto-file skips them and tells you. Tap to open that setting.</string>
+    <!-- "File now" in Settings: runs one Auto-file check straight away. -->
+    <string name="auto_file_run_now_title">File now</string>
+    <string name="auto_file_run_now_summary">Check for new photos to file right away, instead of waiting for the next background check</string>
+    <!-- Toasts after "File now". -->
+    <plurals name="auto_file_run_now_filed">
+        <item quantity="one">Filed %1$d photo</item>
+        <item quantity="other">Filed %1$d photos</item>
+    </plurals>
+    <plurals name="auto_file_run_now_need_permission">
+        <item quantity="one">%1$d photo needs permission. See \'Manage media without asking\'.</item>
+        <item quantity="other">%1$d photos need permission. See \'Manage media without asking\'.</item>
+    </plurals>
+    <plurals name="auto_file_run_now_nothing">
+        <item quantity="one">Nothing to file yet. Photos are filed once they\'re older than %1$d minute.</item>
+        <item quantity="other">Nothing to file yet. Photos are filed once they\'re older than %1$d minutes.</item>
+    </plurals>
+    <string name="auto_file_run_now_off">Auto-file is off</string>
+    <string name="auto_file_run_now_failed">Couldn\'t check for photos to file. Try again in a moment.</string>
 
     <!-- Settings category for the standing media-management grant (Android 12+). -->
     <string name="media_access_category_title">Media access</string>

@@ -5,6 +5,9 @@ import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.SystemClock;
 import android.util.Log;
 
 import java.util.List;
@@ -19,6 +22,10 @@ import java.util.concurrent.Executors;
  * Going through FileOpService is what keeps auto-file from overlapping a manual
  * move: the service runs every batch on one executor, so an auto-file batch
  * simply queues behind whatever the user started.
+ *
+ * Besides the alarm, a check also runs when the gallery opens
+ * ({@link #runOnOpen}) and from "File now" in Settings ({@link #runNow}). All
+ * of them go through the same serial executor and the same rule.
  */
 public class AutoFileReceiver extends BroadcastReceiver {
 
@@ -39,6 +46,19 @@ public class AutoFileReceiver extends BroadcastReceiver {
      */
     private static final Executor SERIAL = Executors.newSingleThreadExecutor();
 
+    /** Opening the gallery checks at most every 30 seconds. */
+    private static final AutoFileRunNow.Throttle OPEN_THROTTLE =
+            new AutoFileRunNow.Throttle(AutoFileRunNow.OPEN_THROTTLE_MILLIS);
+
+    /** Told, on the main thread, how a {@link #runNow} check went. */
+    public interface RunListener {
+        /**
+         * @param enabled the rule was on when the check ran
+         * @param outcome what it did, or null when the check failed
+         */
+        void onRunFinished(boolean enabled, RunOutcome outcome);
+    }
+
     /** What one run did, for the notifications. */
     public static final class RunOutcome {
         public static final RunOutcome NOTHING = new RunOutcome(0, 0);
@@ -47,7 +67,7 @@ public class AutoFileReceiver extends BroadcastReceiver {
         /** Skipped because Android wants the user's permission (CONSENT_REQUIRED). */
         public final int needPermission;
 
-        RunOutcome(int moved, int needPermission) {
+        public RunOutcome(int moved, int needPermission) {
             this.moved = moved;
             this.needPermission = needPermission;
         }
@@ -119,6 +139,73 @@ public class AutoFileReceiver extends BroadcastReceiver {
             if (alarms != null) alarms.cancel(pendingFor(context));
         } catch (RuntimeException failure) {
             Log.e(TAG, "Could not cancel auto-file", failure);
+        }
+    }
+
+    /**
+     * The gallery's main screen came to the foreground: run one check in the
+     * background if Auto-file is on and no check ran in the last 30 seconds.
+     * Same path as the alarm (serialised, same notifications, same delay
+     * rule). Never blocks and never throws.
+     */
+    public static void runOnOpen(Context context) {
+        try {
+            if (!OPEN_THROTTLE.tryClaim(SystemClock.elapsedRealtime())) return;
+            runNow(context, null);
+        } catch (RuntimeException failure) {
+            Log.w(TAG, "Could not start the auto-file check on open", failure);
+        }
+    }
+
+    /**
+     * "File now": run one check straight away, queued behind any run, Undo
+     * or dismissal already in progress. Posts the same notifications as the
+     * alarm run. The listener (optional) hears the result on the main thread.
+     * Never throws.
+     */
+    public static void runNow(Context context, final RunListener listener) {
+        final Context appContext = context.getApplicationContext();
+        try {
+            SERIAL.execute(new Runnable() {
+                @Override
+                public void run() {
+                    boolean enabled = false;
+                    RunOutcome outcome = null;
+                    try {
+                        OPEN_THROTTLE.markRan(SystemClock.elapsedRealtime());
+                        enabled = AutoFileSettings.from(appContext).isEnabled();
+                        long now = System.currentTimeMillis();
+                        outcome = applyRule(appContext, now);
+                        AutoFileNotifier.afterRun(appContext, outcome, now);
+                    } catch (Throwable failure) {
+                        Log.e(TAG, "Auto-file check threw", failure);
+                        outcome = null;
+                    }
+                    report(listener, enabled, outcome);
+                }
+            });
+        } catch (RuntimeException failure) {
+            Log.w(TAG, "Could not queue the auto-file check", failure);
+            report(listener, false, null);
+        }
+    }
+
+    private static void report(final RunListener listener, final boolean enabled,
+            final RunOutcome outcome) {
+        if (listener == null) return;
+        try {
+            new Handler(Looper.getMainLooper()).post(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        listener.onRunFinished(enabled, outcome);
+                    } catch (RuntimeException failure) {
+                        Log.w(TAG, "Auto-file result listener threw", failure);
+                    }
+                }
+            });
+        } catch (RuntimeException failure) {
+            Log.w(TAG, "Could not report the auto-file result", failure);
         }
     }
 
@@ -207,6 +294,7 @@ public class AutoFileReceiver extends BroadcastReceiver {
                 try {
                     long now = System.currentTimeMillis();
                     if (ACTION_AUTO_FILE.equals(action)) {
+                        OPEN_THROTTLE.markRan(SystemClock.elapsedRealtime());
                         RunOutcome outcome = applyRule(appContext, now);
                         AutoFileNotifier.afterRun(appContext, outcome, now);
                     } else if (ACTION_UNDO_FILED.equals(action)) {

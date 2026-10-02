@@ -126,7 +126,9 @@ It moves new photos out of one folder and into **Pictures/year/month** (for exam
 - It is **off** until you switch on **File new photos automatically**.
 - It only files photos added **after** you switch it on. Photos you already had are never touched. Switching it off and on again starts fresh from that moment.
 - **Watch this folder** is the folder it looks in. The default is DCIM/Camera, where your camera saves. Photos in sub-folders are left alone.
-- **Wait before moving** is how many minutes a new photo is left alone first (default 5, anything from 1 minute to 1 day). The app checks in the background, so it can take a little longer than that.
+- **Wait before moving** is how many minutes a new photo is left alone first (default 5, anything from 1 minute to 1 day).
+- **When it checks:** regularly in the background (every few minutes with the default wait), and each time you open the gallery. Android may hold the background checks back for a while to save battery, so a photo can wait longer than you set. It is never filed sooner.
+- **File now**, under the Auto-file settings, checks straight away and tells you what happened: how many photos it filed, that nothing is old enough yet, or that some photos need permission. It is greyed out while Auto-file is off.
 - It files **photos only**, not videos. A photo with no date taken stays where it is.
 - After it moves photos, a notification says so, for example "Filed 3 new photos into Pictures/2026/10", with an **Undo** button. Photos it files over the next 24 hours join that same notification.
 - **Undo** puts back everything the notification counts. It works for **24 hours**, or until you swipe the notification away. A photo you have moved or deleted yourself since is left alone.

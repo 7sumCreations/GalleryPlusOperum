@@ -35,6 +35,7 @@ import com.android.gallery3d.data.DataManager;
 import com.android.gallery3d.data.MediaItem;
 import com.android.gallery3d.data.MediaSet;
 import com.android.gallery3d.data.Path;
+import com.android.gallery3d.fileops.AutoFileReceiver;
 import com.android.gallery3d.picasasource.PicasaSource;
 import com.android.gallery3d.util.GalleryUtils;
 import com.android.gallery3d.util.IncomingUris;
@@ -253,7 +254,13 @@ public final class GalleryActivity extends AbstractGalleryActivity implements On
         if (mVersionCheckDialog != null) {
             mVersionCheckDialog.show();
         }
-        if (mMediaAccessGate != null) mMediaAccessGate.onResume();
+        if (mMediaAccessGate != null) {
+            mMediaAccessGate.onResume();
+            // Browsing the library (not picking for another app): give
+            // Auto-file a chance to run now instead of waiting for its alarm.
+            // Background, throttled, never throws.
+            AutoFileReceiver.runOnOpen(this);
+        }
     }
 
     @Override

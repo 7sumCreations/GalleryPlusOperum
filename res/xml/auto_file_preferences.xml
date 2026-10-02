@@ -40,6 +40,14 @@
                 android:inputType="number"
                 android:defaultValue="5"
                 android:dependency="auto_file_enabled" />
+        <!-- Runs one Auto-file check now (click handled in GallerySettings).
+             Greyed out while Auto-file is off. -->
+        <Preference
+                android:key="auto_file_run_now"
+                android:title="@string/auto_file_run_now_title"
+                android:summary="@string/auto_file_run_now_summary"
+                android:persistent="false"
+                android:dependency="auto_file_enabled" />
     </PreferenceCategory>
     <!-- Opens HelpActivity (click handled in GallerySettings, because the
          application id differs between debug and release builds). -->
