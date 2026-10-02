@@ -2,6 +2,8 @@
 
 *Functio* — Latin for function. A full-featured photo and video gallery for privacy-focused Android, built on the GrapheneOS fork of the AOSP Gallery2 app.
 
+The app appears on your phone as **Gallery Plus Operum**.
+
 The stock AOSP gallery is private because it does very little: no network, no accounts, no cloud — but also no real way to organise your photos. This fork keeps every bit of that privacy, tightens it further, and adds the functionality a gallery should have. There is no reason a private gallery has to be a limited one.
 
 > Independent project. Not affiliated with or endorsed by GrapheneOS or the Android Open Source Project.

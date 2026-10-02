@@ -1,4 +1,4 @@
-# Gallery help
+# Gallery Plus Operum help
 
 A private gallery for your photos and videos. Everything stays on your phone.
 
@@ -11,7 +11,7 @@ The first time you open the app, Android asks two things:
 
 If you said no to Photos and videos, the app explains why it needs it each time you come back. Tap **Allow access** to be asked again, or **Open settings**, then tap **Permissions → Photos and videos**. **Not now** leaves the gallery empty for the moment.
 
-To change either one later, open Android **Settings → Apps → Gallery → Permissions**.
+To change either one later, open Android **Settings → Apps → Gallery Plus Operum → Permissions**.
 
 ## Selecting photos
 
@@ -159,5 +159,5 @@ Android 12 and newer only. Find it in **⋮ → Settings → Media access → Ma
 ## Something went wrong?
 
 - Report it at https://github.com/cpw7776/GrapheneGalleryFunctio/issues (you need a free GitHub account).
-- Say what you did, what you expected and what happened. Add your phone model, Android version and the app version (shown in Android **Settings → Apps → Gallery**).
+- Say what you did, what you expected and what happened. Add your phone model, Android version and the app version (shown in Android **Settings → Apps → Gallery Plus Operum**).
 - If the app crashed and Android shows **Show details**, tap it, copy the text and paste it into your report. Read it first and remove anything you'd rather keep private.
