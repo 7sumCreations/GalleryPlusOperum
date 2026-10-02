@@ -13,6 +13,27 @@ If you said no to Photos and videos, the app explains why it needs it each time 
 
 To change either one later, open Android **Settings → Apps → Gallery Plus Operum → Permissions**.
 
+## Storage Scopes (GrapheneOS)
+
+On GrapheneOS you don't have to give the gallery all of your photos. With **Storage Scopes** you pick the folders (or single files) it may see, and it sees nothing else.
+
+To turn it on:
+
+- Open Android **Settings → Apps → Gallery Plus Operum → Permissions → Photos and videos** and choose **Don't allow**.
+- Then tap **Storage Scopes** and add the folders you want the gallery to see, for example **DCIM/Camera** and **Pictures**.
+
+What changes while it is on:
+
+- The gallery shows only what you added. It doesn't ask for full access again, and everything else on your phone stays hidden from it.
+- Move, Copy, Favourites and Delete work only on photos it can see. The folder list for Move and Copy shows only folders it can see.
+- **Auto-file** only sees new photos in its folder if you added that folder (DCIM/Camera by default). A photo it moves into a folder you didn't add may disappear from the gallery, so add **Pictures** too.
+- **Trash** may show only deleted items from the folders you added.
+- Android may still show the permission dialog before the app changes photos made by another app, such as your camera.
+
+To give it everything again, set **Photos and videos** back to **Allow**.
+
+On Android 14 and newer, Android may also offer **Select photos** when the app asks for access. The gallery then shows only the photos you picked, and Android may ask you to pick again later.
+
 ## Selecting photos
 
 - **Long-press** a photo or video to select it.
