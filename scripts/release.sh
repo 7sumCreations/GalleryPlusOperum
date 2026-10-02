@@ -49,7 +49,7 @@ grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' <<<"$CERTS" \
 VERSION="$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts)"
 OUT_DIR="${RELEASE_OUT_DIR:-$ROOT/build/release}"
 mkdir -p "$OUT_DIR"
-OUT="$OUT_DIR/GrapheneGalleryFunctio-v$VERSION.apk"
+OUT="$OUT_DIR/GalleryPlusOperum-v$VERSION.apk"
 cp "$APK" "$OUT"
 ( cd "$OUT_DIR" && shasum -a 256 "$(basename "$OUT")" > "$(basename "$OUT").sha256" )
 

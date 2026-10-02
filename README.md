@@ -1,8 +1,8 @@
-# GrapheneGalleryFunctio
+<p align="center"><img src="branding/logo.png" alt="Gallery Plus Operum logo" width="256"></p>
 
-*Functio* — Latin for function. A full-featured photo and video gallery for privacy-focused Android, built on the GrapheneOS fork of the AOSP Gallery2 app.
+# Gallery Plus Operum
 
-The app appears on your phone as **Gallery Plus Operum**.
+*Operum* — Latin for "of works". A full-featured photo and video gallery for privacy-focused Android, built on the GrapheneOS fork of the AOSP Gallery2 app.
 
 The stock AOSP gallery is private because it does very little: no network, no accounts, no cloud — but also no real way to organise your photos. This fork keeps every bit of that privacy, tightens it further, and adds the functionality a gallery should have. There is no reason a private gallery has to be a limited one.
 
@@ -37,7 +37,7 @@ What's coming next — fast filing, export, an encrypted vault and more — is i
 
 ## Install
 
-Download the APK from the [Releases](https://github.com/cpw7776/GrapheneGalleryFunctio/releases) page, or let [Obtainium](https://github.com/ImranR98/Obtainium) track this repository and install updates for you (add the repo URL as an app source). The app itself never checks for updates — it has no network access.
+Download the APK from the [Releases](https://github.com/7sumCreations/GalleryPlusOperum/releases) page, or let [Obtainium](https://github.com/ImranR98/Obtainium) track this repository and install updates for you (add the repo URL as an app source). The app itself never checks for updates — it has no network access.
 
 **Verify what you install.** Every release is signed with the same key. Its certificate SHA-256 fingerprint is:
 
@@ -55,8 +55,8 @@ The upstream sources build inside the AOSP tree (`Android.bp`). This fork also c
 
 ```bash
 # libjpeg-turbo is a git submodule — clone with it, or the native build fails
-git clone --recurse-submodules https://github.com/cpw7776/GrapheneGalleryFunctio.git
-cd GrapheneGalleryFunctio
+git clone --recurse-submodules https://github.com/7sumCreations/GalleryPlusOperum.git
+cd GalleryPlusOperum
 # (already cloned without it? run: git submodule update --init)
 
 export JAVA_HOME=/path/to/jdk-17

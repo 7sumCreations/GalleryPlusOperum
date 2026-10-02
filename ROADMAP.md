@@ -1,6 +1,6 @@
 # Roadmap
 
-Where GrapheneGalleryFunctio is going. Work is planned in epics; each one ships only after it has been verified by hand on a real GrapheneOS phone. Every feature on this list follows the same ground rules: no internet access, no accounts, nothing leaves the device unless you send it, and anything automatic is opt-in.
+Where Gallery Plus Operum is going. Work is planned in epics; each one ships only after it has been verified by hand on a real GrapheneOS phone. Every feature on this list follows the same ground rules: no internet access, no accounts, nothing leaves the device unless you send it, and anything automatic is opt-in.
 
 Status key: ✅ done · 🔨 next · 💭 later (planned, not yet scheduled). Epics are listed in build order.
 

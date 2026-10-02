@@ -181,6 +181,6 @@ Android 12 and newer only. Find it in **⋮ → Settings → Media access → Ma
 
 ## Something went wrong?
 
-- Report it at https://github.com/cpw7776/GrapheneGalleryFunctio/issues (you need a free GitHub account).
+- Report it at https://github.com/7sumCreations/GalleryPlusOperum/issues (you need a free GitHub account).
 - Say what you did, what you expected and what happened. Add your phone model, Android version and the app version (shown in Android **Settings → Apps → Gallery Plus Operum**).
 - If the app crashed and Android shows **Show details**, tap it, copy the text and paste it into your report. Read it first and remove anything you'd rather keep private.
