@@ -37,10 +37,8 @@ import com.android.gallery3d.filtershow.FilterShowActivity;
 import com.android.gallery3d.filtershow.imageshow.PrimaryImage;
 import com.android.gallery3d.filtershow.pipeline.ImagePreset;
 import com.android.gallery3d.filtershow.pipeline.ProcessingService;
-import com.android.gallery3d.filtershow.tools.SaveImage;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 
 public class ExportDialog extends DialogFragment implements View.OnClickListener,
         SeekBar.OnSeekBarChangeListener {
@@ -157,10 +155,10 @@ public class ExportDialog extends DialogFragment implements View.OnClickListener
             case R.id.done:
                 FilterShowActivity activity = (FilterShowActivity) getActivity();
                 Uri sourceUri = PrimaryImage.getImage().getUri();
-                File dest = SaveImage.getNewFile(activity,  activity.getSelectedImageUri());
+                // Export, like Save, adds a new copy; the original is never written.
                 float scaleFactor = mExportWidth / (float) mOriginalBounds.width();
                 Intent processIntent = ProcessingService.getSaveIntent(activity, PrimaryImage
-                        .getImage().getPreset(), dest, activity.getSelectedImageUri(), sourceUri,
+                        .getImage().getPreset(), null, activity.getSelectedImageUri(), sourceUri,
                         true, mSeekBar.getProgress(), scaleFactor, false);
                 activity.startService(processIntent);
                 dismiss();

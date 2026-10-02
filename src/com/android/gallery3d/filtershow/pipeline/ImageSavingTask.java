@@ -20,6 +20,7 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Rect;
 import android.net.Uri;
+import android.util.Log;
 import com.android.gallery3d.filtershow.cache.ImageLoader;
 import com.android.gallery3d.filtershow.filters.FiltersManager;
 import com.android.gallery3d.filtershow.tools.SaveImage;
@@ -27,6 +28,7 @@ import com.android.gallery3d.filtershow.tools.SaveImage;
 import java.io.File;
 
 public class ImageSavingTask extends ProcessingTask {
+    private static final String LOGTAG = "ImageSavingTask";
     private ProcessingService mProcessingService;
 
     static class SaveRequest implements Request {
@@ -48,11 +50,6 @@ public class ImageSavingTask extends ProcessingTask {
     static class UpdateProgress implements Update {
         int max;
         int current;
-    }
-
-    static class UpdatePreviewSaved implements Update {
-        Uri uri;
-        boolean exit;
     }
 
     static class URIResult implements Result {
@@ -81,31 +78,42 @@ public class ImageSavingTask extends ProcessingTask {
         postRequest(request);
     }
 
+    /**
+     * Runs on the ProcessingTaskController HandlerThread. Nothing may escape:
+     * an exception here kills the whole app. A failed save is reported as a
+     * null uri, which the service turns into a toast.
+     */
     public Result doInBackground(Request message) {
         SaveRequest request = (SaveRequest) message;
+        URIResult result = new URIResult();
+        result.exit = request.exit;
+        try {
+            result.uri = save(request);
+        } catch (RuntimeException | OutOfMemoryError e) {
+            Log.w(LOGTAG, "Saving the edited photo failed", e);
+            result.uri = null;
+        }
+        return result;
+    }
+
+    private Uri save(SaveRequest request) {
         Uri sourceUri = request.sourceUri;
-        Uri selectedUri = request.selectedUri;
-        File destinationFile = request.destinationFile;
         Bitmap previewImage = request.previewImage;
         ImagePreset preset = request.preset;
-        boolean flatten = request.flatten;
-        final boolean exit = request.exit;
         // We create a small bitmap showing the result that we can
-        // give to the notification
-        UpdateBitmap updateBitmap = new UpdateBitmap();
-        updateBitmap.bitmap = createNotificationBitmap(previewImage, sourceUri, preset);
-        postUpdate(updateBitmap);
+        // give to the notification. Optional: never fail the save over it.
+        try {
+            UpdateBitmap updateBitmap = new UpdateBitmap();
+            updateBitmap.bitmap = createNotificationBitmap(previewImage, sourceUri, preset);
+            if (updateBitmap.bitmap != null) {
+                postUpdate(updateBitmap);
+            }
+        } catch (RuntimeException | OutOfMemoryError e) {
+            Log.w(LOGTAG, "No notification thumbnail", e);
+        }
         SaveImage saveImage = new SaveImage(mProcessingService, sourceUri,
-                selectedUri, destinationFile, previewImage,
+                request.selectedUri, request.destinationFile,
                 new SaveImage.Callback() {
-                    @Override
-                    public void onPreviewSaved(Uri uri){
-                        UpdatePreviewSaved previewSaved = new UpdatePreviewSaved();
-                        previewSaved.uri = uri;
-                        previewSaved.exit = exit;
-                        postUpdate(previewSaved);
-                    }
-
                     @Override
                     public void onProgress(int max, int current) {
                         UpdateProgress updateProgress = new UpdateProgress();
@@ -114,12 +122,8 @@ public class ImageSavingTask extends ProcessingTask {
                         postUpdate(updateProgress);
                     }
                 });
-        Uri uri = saveImage.processAndSaveImage(preset, flatten,
+        return saveImage.processAndSaveImage(preset, request.flatten,
                 request.quality, request.sizeFactor, request.exit);
-        URIResult result = new URIResult();
-        result.uri = uri;
-        result.exit = request.exit;
-        return result;
     }
 
     @Override
@@ -130,11 +134,6 @@ public class ImageSavingTask extends ProcessingTask {
 
     @Override
     public void onUpdate(Update message) {
-        if (message instanceof UpdatePreviewSaved){
-            Uri uri = ((UpdatePreviewSaved) message).uri;
-            boolean exit = ((UpdatePreviewSaved) message).exit;
-            mProcessingService.completePreviewSaveImage(uri, exit);
-        }
         if (message instanceof UpdateBitmap) {
             Bitmap bitmap = ((UpdateBitmap) message).bitmap;
             mProcessingService.updateNotificationWithBitmap(bitmap);
@@ -154,6 +153,9 @@ public class ImageSavingTask extends ProcessingTask {
         }
         Bitmap bitmap = ImageLoader.loadConstrainedBitmap(sourceUri, getContext(),
                 notificationBitmapSize, null, true);
+        if (bitmap == null) {
+            return null;
+        }
         CachingPipeline pipeline = new CachingPipeline(FiltersManager.getManager(), "Thumb");
         return pipeline.renderFinalImage(bitmap, preset);
     }

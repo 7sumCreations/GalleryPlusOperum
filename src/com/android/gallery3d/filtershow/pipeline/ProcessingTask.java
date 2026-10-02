@@ -19,8 +19,10 @@ package com.android.gallery3d.filtershow.pipeline;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Message;
+import android.util.Log;
 
 public abstract class ProcessingTask {
+    private static final String LOGTAG = "ProcessingTask";
     private ProcessingTaskController mTaskController;
     private Handler mProcessingHandler;
     private Handler mResultHandler;
@@ -58,7 +60,15 @@ public abstract class ProcessingTask {
     }
 
     public void processRequest(Request message) {
-        Object result = doInBackground(message);
+        Object result;
+        try {
+            result = doInBackground(message);
+        } catch (RuntimeException e) {
+            // This runs on the ProcessingTaskController HandlerThread, where
+            // an uncaught exception kills the whole app. Drop the request.
+            Log.w(LOGTAG, "Processing request failed", e);
+            return;
+        }
         Message msg = mResultHandler.obtainMessage(mType);
         msg.obj = result;
         msg.arg1 = ProcessingTaskController.RESULT;

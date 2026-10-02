@@ -28,6 +28,7 @@ import android.net.Uri;
 import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
+import android.widget.Toast;
 import com.android.gallery3d.R;
 import com.android.gallery3d.filtershow.FilterShowActivity;
 import com.android.gallery3d.filtershow.filters.FiltersManager;
@@ -146,8 +147,9 @@ public class ProcessingService extends Service {
         Intent processIntent = new Intent(context, ProcessingService.class);
         processIntent.putExtra(ProcessingService.SOURCE_URI,
                 sourceImageUri.toString());
+        // No selected uri when the image came from the in-editor picker.
         processIntent.putExtra(ProcessingService.SELECTED_URI,
-                selectedImageUri.toString());
+                (selectedImageUri != null ? selectedImageUri : sourceImageUri).toString());
         processIntent.putExtra(ProcessingService.QUALITY, quality);
         processIntent.putExtra(ProcessingService.SIZE_FACTOR, sizeFactor);
         if (destination != null) {
@@ -194,6 +196,10 @@ public class ProcessingService extends Service {
             // activity has been destroyed.
             String presetJson = intent.getStringExtra(PRESET);
             String source = intent.getStringExtra(SOURCE_URI);
+            if (source == null || presetJson == null) {
+                stopSelf();
+                return START_NOT_STICKY;
+            }
             String selected = intent.getStringExtra(SELECTED_URI);
             String destination = intent.getStringExtra(DESTINATION_FILE);
             int quality = intent.getIntExtra(QUALITY, 100);
@@ -213,9 +219,15 @@ public class ProcessingService extends Service {
             preset.readJsonFromString(presetJson);
             mNeedsAlive = false;
             mSaving = true;
+            // Only used for the notification thumbnail. After a process
+            // restart (START_REDELIVER_INTENT) there is no primary image.
+            Bitmap preview = null;
+            PrimaryImage primary = PrimaryImage.getImage();
+            if (primary != null) {
+                preview = primary.getHighresImage();
+            }
             handleSaveRequest(sourceUri, selectedUri, destinationFile, preset,
-                    PrimaryImage.getImage().getHighresImage(),
-                    flatten, quality, sizeFactor, exit);
+                    preview, flatten, quality, sizeFactor, exit);
         }
         return START_REDELIVER_INTENT;
     }
@@ -264,31 +276,38 @@ public class ProcessingService extends Service {
         mNotifyMgr.notify(mNotificationId, mBuilder.build());
     }
 
-    public void completePreviewSaveImage(Uri result, boolean exit) {
-        if (exit && !mNeedsAlive && !mFiltershowActivity.isSimpleEditAction()) {
-            mFiltershowActivity.completeSaveImage(result);
-        }
-    }
-
+    /**
+     * On the main thread, once the save task is done. {@code result} is the
+     * NEW photo (the original is never modified), or null when the save
+     * failed: then the user is told and stays in the editor with the edit.
+     */
     public void completeSaveImage(Uri result, boolean exit) {
-        if (SHOW_IMAGE) {
-            // TODO: we should update the existing image in Gallery instead
+        if (SHOW_IMAGE && result != null) {
             Intent viewImage = new Intent(Intent.ACTION_VIEW, result);
             viewImage.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(viewImage);
         }
-        mNotifyMgr.cancel(mNotificationId);
-        if (!exit) {
-            stopForeground(true);
-            stopSelf();
-            return;
+        if (mNotifyMgr != null) {
+            mNotifyMgr.cancel(mNotificationId);
         }
         stopForeground(true);
         stopSelf();
+        if (result == null) {
+            Toast.makeText(this, R.string.filtershow_save_failed, Toast.LENGTH_LONG).show();
+            if (mFiltershowActivity != null) {
+                mFiltershowActivity.onSaveFailed();
+            }
+            return;
+        }
+        if (!exit || mFiltershowActivity == null) {
+            // Export keeps the editor open; with no editor bound (the
+            // process was restarted mid-save) there is nothing to update.
+            return;
+        }
         if (mNeedsAlive) {
             // If the app has been restarted while we were saving...
             mFiltershowActivity.updateUIAfterServiceStarted();
-        } else if (exit || mFiltershowActivity.isSimpleEditAction()) {
+        } else {
             // terminate now
             mFiltershowActivity.completeSaveImage(result);
         }

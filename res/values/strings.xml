@@ -1302,4 +1302,7 @@ CHAR LIMIT = NONE] -->
     <string name="media_access_open_settings">Open settings</string>
     <!-- Button: close the explanation and leave the gallery empty for now. -->
     <string name="media_access_not_now">Not now</string>
+
+    <!-- Toast when the photo editor could not save the edit as a new photo. The original is never changed. -->
+    <string name="filtershow_save_failed">Couldn\'t save the edited photo</string>
 </resources>

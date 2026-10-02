@@ -44,7 +44,7 @@ import android.widget.Toast;
 import com.android.gallery3d.R;
 import com.android.gallery3d.common.Utils;
 import com.android.gallery3d.filtershow.cache.ImageLoader;
-import com.android.gallery3d.filtershow.tools.SaveImage;
+import com.android.gallery3d.filtershow.tools.EditedCopyWriter;
 import com.android.gallery3d.util.IncomingUris;
 
 import java.io.ByteArrayInputStream;
@@ -72,6 +72,9 @@ public class CropActivity extends Activity {
     private CropView mCropView = null;
     private View mSaveButton = null;
     private boolean finalIOGuard = false;
+    /** The pending new photo an in-app crop is written into, or null. */
+    private volatile Uri mPendingCopyUri = null;
+    private volatile EditedCopyWriter.Target mCopyTarget = null;
 
     private static final int SELECT_PICTURE = 1; // request code for picker
 
@@ -312,10 +315,21 @@ public class CropActivity extends Activity {
                 flags |= DO_RETURN_DATA;
             }
         }
-        if (flags == 0) {
-            destinationUri = SaveImage.makeAndInsertUri(this, mSourceUri);
-            if (destinationUri != null) {
+        if (flags == 0 && mOriginalBitmap != null) {
+            // Save the crop as a NEW photo (pending until written); the
+            // original is never modified.
+            String extension = getFileExtension(
+                    (mCropExtras == null) ? null : mCropExtras.getOutputFormat());
+            EditedCopyWriter.Target target = EditedCopyWriter.plan(this, mSourceUri, extension);
+            try {
+                destinationUri = EditedCopyWriter.insertPending(this, target,
+                        "png".equals(extension) ? "image/png" : ImageLoader.JPEG_MIME_TYPE);
+                mCopyTarget = target;
+                mPendingCopyUri = destinationUri;
                 flags |= DO_EXTRA_OUTPUT;
+            } catch (IOException e) {
+                Log.w(LOGTAG, "cannot create the cropped copy", e);
+                Toast.makeText(this, R.string.save_error, Toast.LENGTH_LONG).show();
             }
         }
         if ((flags & FLAG_CHECK) != 0 && mOriginalBitmap != null) {
@@ -338,6 +352,7 @@ public class CropActivity extends Activity {
                 || currentBitmap.getWidth() == 0 || currentBitmap.getHeight() == 0
                 || cropBounds.width() == 0 || cropBounds.height() == 0 || photoBounds.width() == 0
                 || photoBounds.height() == 0) {
+            discardPendingCopy();
             return; // fail fast
         }
         if ((flags & FLAG_CHECK) == 0) {
@@ -354,9 +369,19 @@ public class CropActivity extends Activity {
         ioTask.execute(currentBitmap);
     }
 
+    /** Delete the pending copy when nothing will be written into it. */
+    private void discardPendingCopy() {
+        Uri pending = mPendingCopyUri;
+        mPendingCopyUri = null;
+        EditedCopyWriter.deleteQuietly(this, pending);
+    }
+
     private void doneBitmapIO(boolean success, Intent intent) {
         final View loading = findViewById(R.id.loading);
         loading.setVisibility(View.GONE);
+        if (!success && mPendingCopyUri != null) {
+            Toast.makeText(this, R.string.save_error, Toast.LENGTH_LONG).show();
+        }
         if (success) {
             setResult(RESULT_OK, intent);
         } else {
@@ -388,7 +413,7 @@ public class CropActivity extends Activity {
                 mInStream = null;
                 try {
                     mInStream = getContentResolver().openInputStream(mInUri);
-                } catch (FileNotFoundException e) {
+                } catch (FileNotFoundException | RuntimeException e) {
                     Log.w(LOGTAG, "cannot read file: " + mInUri.toString(), e);
                 }
             }
@@ -427,14 +452,46 @@ public class CropActivity extends Activity {
 
             try {
                 return getContentResolver().openOutputStream(mOutUri);
-            } catch (FileNotFoundException e) {
+            } catch (FileNotFoundException | RuntimeException e) {
                 Log.w(LOGTAG, "uri: " + mOutUri, e);
                 return null;
             }
         }
 
+        /**
+         * Never throws (an exception on this AsyncTask thread kills the app).
+         * The pending copy made for an in-app crop is published only when
+         * the crop was really written into it, otherwise it is deleted.
+         */
         @Override
         protected Boolean doInBackground(Bitmap... params) {
+            boolean ok;
+            try {
+                ok = writeOutputs(params);
+            } catch (RuntimeException | OutOfMemoryError e) {
+                Log.w(LOGTAG, "cannot save the crop", e);
+                ok = false;
+            }
+            Uri pending = mPendingCopyUri;
+            if (pending != null && mOutUri != null && pending.equals(mOutUri)) {
+                ok = ok && mResultIntent.getData() != null;
+                if (ok) {
+                    try {
+                        EditedCopyWriter.publish(CropActivity.this, pending,
+                                mCopyTarget.dateTakenMillis);
+                        mResultIntent.setData(EditedCopyWriter.galleryUri(pending));
+                    } catch (IOException e) {
+                        Log.w(LOGTAG, "cannot publish the crop", e);
+                        ok = false;
+                    }
+                } else {
+                    EditedCopyWriter.deleteQuietly(CropActivity.this, pending);
+                }
+            }
+            return ok;
+        }
+
+        private boolean writeOutputs(Bitmap... params) {
             boolean failure = false;
             Bitmap img = params[0];
 

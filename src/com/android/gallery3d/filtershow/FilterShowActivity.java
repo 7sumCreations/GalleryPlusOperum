@@ -39,6 +39,7 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.CancellationSignal;
 import android.os.Handler;
 import android.os.IBinder;
@@ -111,6 +112,8 @@ import com.android.gallery3d.filtershow.presets.PresetManagementDialog;
 import com.android.gallery3d.filtershow.presets.UserPresetsAdapter;
 import com.android.gallery3d.filtershow.provider.SharedImageProvider;
 import com.android.gallery3d.filtershow.state.StateAdapter;
+import com.android.gallery3d.fileops.RelativePaths;
+import com.android.gallery3d.filtershow.tools.EditedCopyWriter;
 import com.android.gallery3d.filtershow.tools.SaveImage;
 import com.android.gallery3d.filtershow.tools.XmpPresets;
 import com.android.gallery3d.filtershow.tools.XmpPresets.XMresults;
@@ -959,9 +962,28 @@ public class FilterShowActivity extends FragmentActivity implements OnItemClickL
             values.put(SharedImageProvider.PREPARE, false);
             getContentResolver().insert(uri, values);
         }
+        // saveUri is the NEW copy, so the viewer moves to it.
         setResult(RESULT_OK, new Intent().setData(saveUri));
         hideSavingProgress();
         finish();
+    }
+
+    /** The save failed (the service has shown a toast): stay here, edit intact. */
+    public void onSaveFailed() {
+        if (mSharingImage && mSharedOutputFile != null) {
+            // Unblock a share receiver waiting on the provider; it gets no file.
+            try {
+                Uri uri = Uri.withAppendedPath(SharedImageProvider.CONTENT_URI,
+                        Uri.encode(mSharedOutputFile.getAbsolutePath()));
+                ContentValues values = new ContentValues();
+                values.put(SharedImageProvider.PREPARE, false);
+                getContentResolver().insert(uri, values);
+            } catch (RuntimeException e) {
+                Log.w(LOGTAG, "Could not release the share provider", e);
+            }
+            mSharingImage = false;
+        }
+        hideSavingProgress();
     }
 
     @Override
@@ -986,7 +1008,9 @@ public class FilterShowActivity extends FragmentActivity implements OnItemClickL
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET);
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         intent.setType(SharedImageProvider.MIME_TYPE);
-        mSharedOutputFile = SaveImage.getNewFile(this, PrimaryImage.getImage().getUri());
+        // Rendered into this app's cache; saving it also adds a new copy to
+        // the gallery. The original is never written.
+        mSharedOutputFile = SaveImage.newShareFile(this);
         Uri uri = Uri.withAppendedPath(SharedImageProvider.CONTENT_URI,
                 Uri.encode(mSharedOutputFile.getAbsolutePath()));
         intent.putExtra(Intent.EXTRA_STREAM, uri);
@@ -1413,9 +1437,12 @@ public class FilterShowActivity extends FragmentActivity implements OnItemClickL
     public void saveImage() {
         if (mImageShow.hasModifications()) {
             // Get the name of the album, to which the image will be saved
-            File saveDir = SaveImage.getFinalSaveDirectory(this, mSelectedImageUri);
+            // Edits are always saved as a new copy; name the folder it goes to.
+            String folder = EditedCopyWriter.targetFolder(this, mSelectedImageUri);
+            File saveDir = new File(Environment.getExternalStorageDirectory(), folder);
             int bucketId = GalleryUtils.getBucketId(saveDir.getPath());
-            String albumName = LocalAlbum.getLocalizedName(getResources(), bucketId, null);
+            String albumName = LocalAlbum.getLocalizedName(getResources(), bucketId,
+                    RelativePaths.lastSegment(folder));
             showSavingProgress(albumName);
             mImageShow.saveImage(this, null);
         } else {
