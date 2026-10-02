@@ -74,6 +74,10 @@ Debug builds install as a separate app (`org.gallery2.fork.debug`). Release buil
 
 Under active development, tested by hand on a GrapheneOS Pixel before each release. One release per epic — see the [roadmap](ROADMAP.md).
 
+**Known issues in v0.1.1**
+- **Auto-file may not pick up new camera photos.** On the test phone a new photo stayed in Camera and "File now" reported nothing to file. Move photos by hand for now; this is the first fix in the next release.
+- **The Locations, Times, People and Tags views** at the top of the album list are inherited from the original gallery and can crash or show nothing useful. Stay on Albums; these views will be rebuilt with the metadata and timeline work.
+
 ## License
 
 [Apache License 2.0](LICENSE) — you are free to use, modify, fork and redistribute this project, including commercially, as long as you keep the license and copyright notices and state your changes. See [NOTICE](NOTICE) for attribution. Original code © The Android Open Source Project; GrapheneOS changes © their respective authors.
